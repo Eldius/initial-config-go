@@ -1,4 +1,4 @@
-module github.com/eldius/initial-config
+module github.com/eldius/initial-config-go
 
 go 1.23.2
 
