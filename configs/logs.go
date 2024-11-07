@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -10,7 +11,14 @@ import (
 	"strings"
 )
 
+var (
+	InvalidLogOutputConfigErr = errors.New("invalid log output configuration: should enable stdout or define an output file")
+)
+
 func setupLogs(appName, format, level, logOutputFile string, stdout bool) error {
+	if !stdout && logOutputFile == "" {
+		return fmt.Errorf("%w: logOutputFile: %s / stdout: %v", InvalidLogOutputConfigErr, logOutputFile, stdout)
+	}
 	h, err := logHandler(appName, format, level, logOutputFile, stdout)
 	if err != nil {
 		return fmt.Errorf("failed to create log handler: %w", err)
