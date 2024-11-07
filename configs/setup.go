@@ -7,6 +7,7 @@ import (
 	"golang.org/x/exp/maps"
 	"log"
 	"os"
+	"os/user"
 	"path/filepath"
 )
 
@@ -40,17 +41,69 @@ var (
 )
 
 type SetupOptions struct {
-	CfgFile       string
-	DefaultValues map[string]any
+	CfgFilePathToBeUsed     string
+	DefaultCfgFileLocations []string
+	DefaultCfgFileName      string
+	DefaultValues           map[string]any
 }
 
+func (o SetupOptions) GetDefaultValues() map[string]any {
+	if _, ok := o.DefaultValues[LogLevelKey]; !ok {
+		o.DefaultValues[LogLevelKey] = LogLevelINFO
+	}
+	if _, ok := o.DefaultValues[LogFormatKey]; !ok {
+		o.DefaultValues[LogFormatKey] = LogFormatText
+	}
+	if _, ok := o.DefaultValues[LogOutputToStdoutKey]; !ok {
+		o.DefaultValues[LogOutputToStdoutKey] = false
+	}
+	return o.DefaultValues
+}
+
+func (o SetupOptions) GetCfgFilePathToBeUsed(appName string) string {
+	if o.CfgFilePathToBeUsed != "" {
+		return o.CfgFilePathToBeUsed
+	}
+	return fmt.Sprintf("~/.%s", appName)
+}
+
+func (o SetupOptions) GetDefaultCfgFileName() string {
+	if o.DefaultCfgFileName != "" {
+		return o.DefaultCfgFileName
+	}
+
+	return "config"
+}
+
+func (o SetupOptions) GetDefaultCfgFileLocations(appName string) []string {
+	if o.DefaultCfgFileName != "" {
+		return o.DefaultCfgFileLocations
+	}
+	return []string{fmt.Sprintf("~/.%s", appName)}
+}
+
+// OptionFunc customization option
 type OptionFunc func(*SetupOptions)
 
-// WithConfigFile defines the app configuration file
-// to be used
-func WithConfigFile(file string) OptionFunc {
+// WithDefaultCfgFileLocations defines locations to search for config files
+func WithDefaultCfgFileLocations(f ...string) OptionFunc {
 	return func(o *SetupOptions) {
-		o.CfgFile = file
+		o.DefaultCfgFileLocations = f
+	}
+}
+
+// WithDefaultCfgFileName defines default config file name
+func WithDefaultCfgFileName(f string) OptionFunc {
+	return func(o *SetupOptions) {
+		o.DefaultCfgFileName = f
+	}
+}
+
+// WithConfigFileToBeUsed defines the app configuration file
+// to be used
+func WithConfigFileToBeUsed(file string) OptionFunc {
+	return func(o *SetupOptions) {
+		o.CfgFilePathToBeUsed = file
 	}
 }
 
@@ -80,9 +133,9 @@ func InitSetup(appName string, opts ...OptionFunc) error {
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-	if cfg.CfgFile != "" {
+	if cfg.CfgFilePathToBeUsed != "" {
 		// Use config file from the flag.
-		viper.SetConfigFile(cfg.CfgFile)
+		viper.SetConfigFile(cfg.CfgFilePathToBeUsed)
 	} else {
 		// Find home directory.
 		home, err := homedir.Dir()
@@ -93,11 +146,19 @@ func InitSetup(appName string, opts ...OptionFunc) error {
 
 		viper.AddConfigPath(filepath.Join(home, fmt.Sprintf(".%s", appName)))
 		viper.AddConfigPath(filepath.Join(home))
+		for _, f := range cfg.GetDefaultCfgFileLocations(appName) {
+			abs, err := absolutePath(f)
+			if err != nil {
+				err = fmt.Errorf("cannot resolve absolute path of config file '%s': %v", f, err)
+				log.Printf("failed to get absolute path for config file location: %s", err)
+			}
+			viper.AddConfigPath(abs)
+		}
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(appName)
+		viper.SetConfigName(cfg.GetDefaultCfgFileName())
 	}
 
-	setDefaults(cfg.DefaultValues)
+	setDefaults(cfg.GetDefaultValues())
 
 	viper.AutomaticEnv() // read in environment variables that match
 
@@ -112,16 +173,27 @@ func InitSetup(appName string, opts ...OptionFunc) error {
 }
 
 func setDefaults(defaultValues map[string]any) {
-	if _, ok := defaultValues[LogLevelKey]; !ok {
-		defaultValues[LogLevelKey] = LogLevelINFO
-	}
-	if _, ok := defaultValues[LogFormatKey]; !ok {
-		defaultValues[LogFormatKey] = LogFormatText
-	}
-	if _, ok := defaultValues[LogOutputToStdoutKey]; !ok {
-		defaultValues[LogOutputToStdoutKey] = false
-	}
 	for k, v := range defaultValues {
 		viper.SetDefault(k, v)
 	}
+}
+
+func expandPath(path string) (string, error) {
+	if len(path) == 0 || path[0] != '~' {
+		return path, nil
+	}
+
+	usr, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(usr.HomeDir, path[1:]), nil
+}
+
+func absolutePath(path string) (string, error) {
+	path, err := expandPath(path)
+	if err != nil {
+		return "", fmt.Errorf("expanded path: %w", err)
+	}
+	return filepath.Abs(path)
 }
