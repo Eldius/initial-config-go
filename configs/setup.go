@@ -60,13 +60,6 @@ func (o SetupOptions) GetDefaultValues() map[string]any {
 	return o.DefaultValues
 }
 
-func (o SetupOptions) GetCfgFilePathToBeUsed(appName string) string {
-	if o.CfgFilePathToBeUsed != "" {
-		return o.CfgFilePathToBeUsed
-	}
-	return fmt.Sprintf("~/.%s", appName)
-}
-
 func (o SetupOptions) GetDefaultCfgFileName() string {
 	if o.DefaultCfgFileName != "" {
 		return o.DefaultCfgFileName
@@ -79,7 +72,10 @@ func (o SetupOptions) GetDefaultCfgFileLocations(appName string) []string {
 	if o.DefaultCfgFileName != "" {
 		return o.DefaultCfgFileLocations
 	}
-	return []string{fmt.Sprintf("~/.%s", appName)}
+	return []string{
+		fmt.Sprintf("~/.%s", appName),
+		".",
+	}
 }
 
 // OptionFunc customization option
