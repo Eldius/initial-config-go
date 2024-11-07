@@ -1,11 +1,11 @@
 module github.com/eldius/initial-config-go
 
-go 1.23.2
+go 1.23.3
 
 require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/spf13/viper v1.19.0
-	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
+	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c
 )
 
 require (
