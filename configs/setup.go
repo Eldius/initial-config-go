@@ -47,7 +47,11 @@ type SetupOptions struct {
 	DefaultValues           map[string]any
 }
 
-func (o SetupOptions) GetDefaultValues() map[string]any {
+func (o *SetupOptions) GetDefaultValues() map[string]any {
+	if o.DefaultValues == nil {
+		o.DefaultValues = make(map[string]any)
+	}
+
 	if _, ok := o.DefaultValues[LogLevelKey]; !ok {
 		o.DefaultValues[LogLevelKey] = LogLevelINFO
 	}
@@ -60,22 +64,22 @@ func (o SetupOptions) GetDefaultValues() map[string]any {
 	return o.DefaultValues
 }
 
-func (o SetupOptions) GetDefaultCfgFileName() string {
-	if o.DefaultCfgFileName != "" {
-		return o.DefaultCfgFileName
+func (o *SetupOptions) GetDefaultCfgFileName() string {
+	if o.DefaultCfgFileName == "" {
+		o.DefaultCfgFileName = "config"
 	}
 
-	return "config"
+	return o.DefaultCfgFileName
 }
 
-func (o SetupOptions) GetDefaultCfgFileLocations(appName string) []string {
-	if o.DefaultCfgFileName != "" {
-		return o.DefaultCfgFileLocations
+func (o *SetupOptions) GetDefaultCfgFileLocations(appName string) []string {
+	if o.DefaultCfgFileLocations == nil {
+		o.DefaultCfgFileLocations = []string{
+			fmt.Sprintf("~/.%s", appName),
+			".",
+		}
 	}
-	return []string{
-		fmt.Sprintf("~/.%s", appName),
-		".",
-	}
+	return o.DefaultCfgFileLocations
 }
 
 // OptionFunc customization option
