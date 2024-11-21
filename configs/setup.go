@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"errors"
 	"fmt"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
@@ -9,20 +10,6 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-)
-
-const (
-	LogFormatKey         = "log.format"
-	LogLevelKey          = "log.level"
-	LogOutputFileKey     = "log.output_to_file"
-	LogOutputToStdoutKey = "log.output_to_stdout"
-
-	LogFormatJSON = "json"
-	LogFormatText = "text"
-	LogLevelINFO  = "info"
-	LogLevelDEBUG = "debug"
-	LogLevelWARN  = "warn"
-	LogLevelERROR = "error"
 )
 
 var (
@@ -38,6 +25,10 @@ var (
 		"file",
 		"line",
 	}
+)
+
+var (
+	EmptyAppNameError = errors.New("appName is empty")
 )
 
 type SetupOptions struct {
@@ -129,6 +120,10 @@ func WithDefaultValues(vals map[string]any) OptionFunc {
 // InitSetup sets up application default configurations
 // for spf13/viper and slog libraries
 func InitSetup(appName string, opts ...OptionFunc) error {
+	if appName == "" {
+		return fmt.Errorf("invalid app name: %ww", EmptyAppNameError)
+	}
+
 	cfg := SetupOptions{}
 	for _, opt := range opts {
 		opt(&cfg)
