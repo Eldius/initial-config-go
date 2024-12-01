@@ -13,21 +13,6 @@ import (
 )
 
 var (
-	logKeys = []string{
-		"host",
-		"service.name",
-		"level",
-		"message",
-		"time",
-		"error",
-		"source",
-		"function",
-		"file",
-		"line",
-	}
-)
-
-var (
 	EmptyAppNameError = errors.New("appName is empty")
 )
 
