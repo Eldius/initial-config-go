@@ -1,28 +1,15 @@
-package configs
+package setup
 
 import (
 	"errors"
 	"fmt"
+	"github.com/eldius/initial-config-go/configs"
 	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
-)
-
-const (
-	LogFormatKey         = "log.format"
-	LogLevelKey          = "log.level"
-	LogOutputFileKey     = "log.output_to_file"
-	LogOutputToStdoutKey = "log.output_to_stdout"
-
-	LogFormatJSON = "json"
-	LogFormatText = "text"
-	LogLevelINFO  = "info"
-	LogLevelDEBUG = "debug"
-	LogLevelWARN  = "warn"
-	LogLevelERROR = "error"
 )
 
 var (
@@ -53,11 +40,11 @@ func setupLogs(appName, format, level, logOutputFile string, stdout bool) error 
 
 func parseLogLevel(lvl string) slog.Level {
 	switch strings.ToLower(lvl) {
-	case LogLevelDEBUG:
+	case configs.LogLevelDEBUG:
 		return slog.LevelDebug
-	case LogLevelWARN:
+	case configs.LogLevelWARN:
 		return slog.LevelWarn
-	case LogLevelERROR:
+	case configs.LogLevelERROR:
 		return slog.LevelError
 	default:
 		return slog.LevelInfo
@@ -86,7 +73,7 @@ func logHandler(appName, format, level, outputFile string, stdout bool) (slog.Ha
 			w = f
 		}
 	}
-	if strings.ToLower(format) == LogFormatJSON {
+	if strings.ToLower(format) == configs.LogFormatJSON {
 		return slog.NewJSONHandler(w, &slog.HandlerOptions{
 			AddSource:   true,
 			Level:       parseLogLevel(level),

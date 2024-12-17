@@ -1,8 +1,9 @@
-package configs
+package setup
 
 import (
 	"errors"
 	"fmt"
+	"github.com/eldius/initial-config-go/configs"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 	"golang.org/x/exp/maps"
@@ -28,14 +29,14 @@ func (o *SetupOptions) GetDefaultValues() map[string]any {
 		o.DefaultValues = make(map[string]any)
 	}
 
-	if _, ok := o.DefaultValues[LogLevelKey]; !ok {
-		o.DefaultValues[LogLevelKey] = LogLevelINFO
+	if _, ok := o.DefaultValues[configs.LogLevelKey]; !ok {
+		o.DefaultValues[configs.LogLevelKey] = configs.LogLevelINFO
 	}
-	if _, ok := o.DefaultValues[LogFormatKey]; !ok {
-		o.DefaultValues[LogFormatKey] = LogFormatText
+	if _, ok := o.DefaultValues[configs.LogFormatKey]; !ok {
+		o.DefaultValues[configs.LogFormatKey] = configs.LogFormatText
 	}
-	if _, ok := o.DefaultValues[LogOutputToStdoutKey]; !ok {
-		o.DefaultValues[LogOutputToStdoutKey] = false
+	if _, ok := o.DefaultValues[configs.LogOutputToStdoutKey]; !ok {
+		o.DefaultValues[configs.LogOutputToStdoutKey] = false
 	}
 	return o.DefaultValues
 }
@@ -149,7 +150,11 @@ func InitSetup(appName string, opts ...OptionFunc) error {
 		log.Printf("Could not find config file using default values: %s", err)
 	}
 
-	return setupLogs(appName, GetLogFormat(), GetLogLevel(), GetLogOutput(), GetLogToStdout())
+	if err := setupLogs(appName, configs.GetLogFormat(), configs.GetLogLevel(), configs.GetLogOutput(), configs.GetLogToStdout()); err != nil {
+		return fmt.Errorf("setupLogs: %w", err)
+	}
+
+	return nil
 }
 
 func setDefaults(defaultValues map[string]any) {
