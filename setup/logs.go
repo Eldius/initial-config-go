@@ -16,11 +16,11 @@ var (
 	InvalidLogOutputConfigErr = errors.New("invalid log output configuration: should enable stdout or define an output file")
 )
 
-func setupLogs(appName, format, level, logOutputFile string, stdout bool) error {
+func setupLogs(appName, format, level, logOutputFile string, stdout bool, keysToRedact ...string) error {
 	if !stdout && logOutputFile == "" {
 		return fmt.Errorf("%w: logOutputFile: %s / stdout: %v", InvalidLogOutputConfigErr, logOutputFile, stdout)
 	}
-	h, err := logHandler(appName, format, level, logOutputFile, stdout)
+	h, err := logHandler(appName, format, level, logOutputFile, stdout, keysToRedact...)
 	if err != nil {
 		return fmt.Errorf("failed to create log handler: %w", err)
 	}
@@ -51,7 +51,7 @@ func parseLogLevel(lvl string) slog.Level {
 	}
 }
 
-func logHandler(appName, format, level, outputFile string, stdout bool) (slog.Handler, error) {
+func logHandler(appName, format, level, outputFile string, stdout bool, keysToRedact ...string) (slog.Handler, error) {
 	var w io.Writer
 	if stdout {
 		w = os.Stdout
@@ -73,18 +73,22 @@ func logHandler(appName, format, level, outputFile string, stdout bool) (slog.Ha
 			w = f
 		}
 	}
+	//keysToRedact := make([]string, 0)
+
 	if strings.ToLower(format) == configs.LogFormatJSON {
-		return slog.NewJSONHandler(w, &slog.HandlerOptions{
+		return newRedactHandler(slog.NewJSONHandler(w, &slog.HandlerOptions{
 			AddSource:   true,
 			Level:       parseLogLevel(level),
 			ReplaceAttr: logAttrsReplacerFunc(appName),
-		}), nil
+		}),
+			keysToRedact,
+		), nil
 	}
-	return slog.NewTextHandler(w, &slog.HandlerOptions{
+	return newRedactHandler(slog.NewTextHandler(w, &slog.HandlerOptions{
 		AddSource:   true,
 		Level:       parseLogLevel(level),
 		ReplaceAttr: logAttrsReplacerFunc(appName),
-	}), nil
+	}), keysToRedact), nil
 }
 
 var (

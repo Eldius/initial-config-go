@@ -20,3 +20,7 @@ func GetLogLevel() string {
 func GetLogFormat() string {
 	return strings.ToLower(viper.GetString(LogFormatKey))
 }
+
+func GetLogKeysToRedact() []string {
+	return viper.GetStringSlice(LogKeysToRedactKey)
+}

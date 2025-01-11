@@ -150,7 +150,14 @@ func InitSetup(appName string, opts ...OptionFunc) error {
 		log.Printf("Could not find config file using default values: %s", err)
 	}
 
-	if err := setupLogs(appName, configs.GetLogFormat(), configs.GetLogLevel(), configs.GetLogOutput(), configs.GetLogToStdout()); err != nil {
+	if err := setupLogs(
+		appName,
+		configs.GetLogFormat(),
+		configs.GetLogLevel(),
+		configs.GetLogOutput(),
+		configs.GetLogToStdout(),
+		configs.GetLogKeysToRedact()...,
+	); err != nil {
 		return fmt.Errorf("setupLogs: %w", err)
 	}
 
