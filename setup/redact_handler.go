@@ -153,7 +153,6 @@ func parseStruct[T any](v T, redactedKeyList []string) T {
 				continue
 			}
 			nVal.Elem().Field(i).Set(fieldValue)
-			//vVal.Field(i).Set(fieldValue)
 		}
 	}
 	fmt.Printf("parsedStruct: %#v\n", v)
