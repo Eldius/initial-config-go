@@ -17,14 +17,14 @@ var (
 	EmptyAppNameError = errors.New("appName is empty")
 )
 
-type SetupOptions struct {
+type Options struct {
 	CfgFilePathToBeUsed     string
 	DefaultCfgFileLocations []string
 	DefaultCfgFileName      string
 	DefaultValues           map[string]any
 }
 
-func (o *SetupOptions) GetDefaultValues() map[string]any {
+func (o *Options) GetDefaultValues() map[string]any {
 	if o.DefaultValues == nil {
 		o.DefaultValues = make(map[string]any)
 	}
@@ -41,7 +41,7 @@ func (o *SetupOptions) GetDefaultValues() map[string]any {
 	return o.DefaultValues
 }
 
-func (o *SetupOptions) GetDefaultCfgFileName() string {
+func (o *Options) GetDefaultCfgFileName() string {
 	if o.DefaultCfgFileName == "" {
 		o.DefaultCfgFileName = "config"
 	}
@@ -49,7 +49,7 @@ func (o *SetupOptions) GetDefaultCfgFileName() string {
 	return o.DefaultCfgFileName
 }
 
-func (o *SetupOptions) GetDefaultCfgFileLocations(appName string) []string {
+func (o *Options) GetDefaultCfgFileLocations(appName string) []string {
 	if o.DefaultCfgFileLocations == nil {
 		o.DefaultCfgFileLocations = []string{
 			fmt.Sprintf("~/.%s", appName),
@@ -60,18 +60,18 @@ func (o *SetupOptions) GetDefaultCfgFileLocations(appName string) []string {
 }
 
 // OptionFunc customization option
-type OptionFunc func(*SetupOptions)
+type OptionFunc func(*Options)
 
 // WithDefaultCfgFileLocations defines locations to search for config files
 func WithDefaultCfgFileLocations(f ...string) OptionFunc {
-	return func(o *SetupOptions) {
+	return func(o *Options) {
 		o.DefaultCfgFileLocations = f
 	}
 }
 
 // WithDefaultCfgFileName defines default config file name
 func WithDefaultCfgFileName(f string) OptionFunc {
-	return func(o *SetupOptions) {
+	return func(o *Options) {
 		o.DefaultCfgFileName = f
 	}
 }
@@ -79,7 +79,7 @@ func WithDefaultCfgFileName(f string) OptionFunc {
 // WithConfigFileToBeUsed defines the app configuration file
 // to be used
 func WithConfigFileToBeUsed(file string) OptionFunc {
-	return func(o *SetupOptions) {
+	return func(o *Options) {
 		o.CfgFilePathToBeUsed = file
 	}
 }
@@ -94,7 +94,7 @@ func WithConfigFileToBeUsed(file string) OptionFunc {
 //   - Log output file:       `log.output_to_file` (output file path as a string)
 //   - Log to stdout:         `log.output_to_stdout` (accepts `true` or `false`)
 func WithDefaultValues(vals map[string]any) OptionFunc {
-	return func(o *SetupOptions) {
+	return func(o *Options) {
 		if o.DefaultValues == nil {
 			o.DefaultValues = vals
 			return
@@ -110,7 +110,7 @@ func InitSetup(appName string, opts ...OptionFunc) error {
 		return fmt.Errorf("invalid app name: %ww", EmptyAppNameError)
 	}
 
-	cfg := SetupOptions{}
+	cfg := Options{}
 	for _, opt := range opts {
 		opt(&cfg)
 	}
