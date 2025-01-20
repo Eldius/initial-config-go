@@ -47,8 +47,7 @@ validate: test lint vulncheck
 	@echo "-----------------------------"
 	@echo ""
 
-tag: test lint vulncheck
-#	git checkout integration
+release: test lint vulncheck
 	@echo ""
 	@echo "##############################"
 	@echo "# Generating next version... #"
