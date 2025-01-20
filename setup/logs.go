@@ -20,7 +20,16 @@ func setupLogs(appName, format, level, logOutputFile string, stdout bool, keysTo
 	if !stdout && logOutputFile == "" {
 		return fmt.Errorf("%w: logOutputFile: %s / stdout: %v", InvalidLogOutputConfigErr, logOutputFile, stdout)
 	}
-	h, err := logHandler(appName, format, level, logOutputFile, stdout, keysToRedact...)
+
+	for i, key := range keysToRedact {
+		keysToRedact[i] = strings.ToLower(key)
+	}
+
+	writer, err := getWriter(logOutputFile, stdout)
+	if err != nil {
+		return fmt.Errorf("%w: %v", InvalidLogOutputConfigErr, err)
+	}
+	h, err := logHandler(appName, format, level, writer, keysToRedact...)
 	if err != nil {
 		return fmt.Errorf("failed to create log handler: %w", err)
 	}
@@ -51,44 +60,55 @@ func parseLogLevel(lvl string) slog.Level {
 	}
 }
 
-func logHandler(appName, format, level, outputFile string, stdout bool, keysToRedact ...string) (slog.Handler, error) {
+func getWriter(outputFile string, logToStdout bool) (io.Writer, error) {
 	var w io.Writer
-	if stdout {
+	if logToStdout {
 		w = os.Stdout
 	}
 	if outputFile != "" {
-		out, err := filepath.Abs(outputFile)
+		outputFile, err := filepath.Abs(outputFile)
 		if err != nil {
-			err = fmt.Errorf("parsing log absolute path: %w", err)
-			return nil, err
+			return nil, fmt.Errorf("failed to resolve absolute path to log file: %w", err)
 		}
-		f, err := os.Create(out)
+		outFile, err := os.OpenFile(outputFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			err = fmt.Errorf("opening log file: %w", err)
-			return nil, err
+			return nil, fmt.Errorf("failed to open output file %s: %w", outputFile, err)
 		}
-		if w != nil {
-			w = io.MultiWriter(w, f)
-		} else {
-			w = f
+		if w == nil {
+			return outFile, nil
 		}
-	}
-	//keysToRedact := make([]string, 0)
 
+		w = io.MultiWriter(outFile, w)
+	}
+
+	return w, nil
+}
+
+func logHandler(appName, format, level string, w io.Writer, keysToRedact ...string) (slog.Handler, error) {
 	if strings.ToLower(format) == configs.LogFormatJSON {
-		return newRedactHandler(slog.NewJSONHandler(w, &slog.HandlerOptions{
+		handler := slog.NewJSONHandler(w, &slog.HandlerOptions{
 			AddSource:   true,
 			Level:       parseLogLevel(level),
-			ReplaceAttr: logAttrsReplacerFunc(appName),
-		}),
-			keysToRedact,
-		), nil
+			ReplaceAttr: logAttrsReplacerFunc(),
+		})
+		if len(keysToRedact) == 0 {
+			return handler, nil
+		}
+		return newRedactHandler(handler, keysToRedact), nil
 	}
-	return newRedactHandler(slog.NewTextHandler(w, &slog.HandlerOptions{
+	handler := slog.NewTextHandler(w, &slog.HandlerOptions{
 		AddSource:   true,
 		Level:       parseLogLevel(level),
-		ReplaceAttr: logAttrsReplacerFunc(appName),
-	}), keysToRedact), nil
+		ReplaceAttr: logAttrsReplacerFunc(),
+	})
+	if len(keysToRedact) == 0 {
+		return handler, nil
+	}
+
+	if len(keysToRedact) == 0 {
+		return handler, nil
+	}
+	return newRedactHandler(handler, keysToRedact), nil
 }
 
 var (
@@ -106,7 +126,7 @@ var (
 	}
 )
 
-func logAttrsReplacerFunc(appName string) func(groups []string, a slog.Attr) slog.Attr {
+func logAttrsReplacerFunc() func(groups []string, a slog.Attr) slog.Attr {
 	return func(groups []string, a slog.Attr) slog.Attr {
 		if slices.Contains(logKeys, a.Key) {
 			return a
@@ -124,7 +144,6 @@ func logAttrsReplacerFunc(appName string) func(groups []string, a slog.Attr) slo
 			a.Key = "message"
 			return a
 		}
-		a.Key = fmt.Sprintf("custom.%s.%s", appName, a.Key)
 		return a
 	}
 }
