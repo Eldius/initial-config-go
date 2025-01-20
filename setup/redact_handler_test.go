@@ -19,7 +19,6 @@ func TestRedactValues_Handler(t *testing.T) {
 	t.Run("given log keys using the same casing should redact then", func(t *testing.T) {
 		var buff bytes.Buffer
 		h, err := logHandler(
-			"my-app",
 			configs.LogFormatJSON,
 			configs.LogLevelDEBUG,
 			&buff,
@@ -88,8 +87,6 @@ func TestRedactValues_Handler(t *testing.T) {
 				if err := json.Unmarshal(line, &m); err != nil {
 					t.Fatal(err)
 				}
-				//logMapKeys := maps.Keys(m)
-				//assert.NotContains(t, logMapKeys, "msg")
 
 				m["msg"] = m["message"]
 

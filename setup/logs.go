@@ -29,7 +29,7 @@ func setupLogs(appName, format, level, logOutputFile string, stdout bool, keysTo
 	if err != nil {
 		return fmt.Errorf("%w: %v", InvalidLogOutputConfigErr, err)
 	}
-	h, err := logHandler(appName, format, level, writer, keysToRedact...)
+	h, err := logHandler(format, level, writer, keysToRedact...)
 	if err != nil {
 		return fmt.Errorf("failed to create log handler: %w", err)
 	}
@@ -84,7 +84,7 @@ func getWriter(outputFile string, logToStdout bool) (io.Writer, error) {
 	return w, nil
 }
 
-func logHandler(appName, format, level string, w io.Writer, keysToRedact ...string) (slog.Handler, error) {
+func logHandler(format, level string, w io.Writer, keysToRedact ...string) (slog.Handler, error) {
 	if strings.ToLower(format) == configs.LogFormatJSON {
 		handler := slog.NewJSONHandler(w, &slog.HandlerOptions{
 			AddSource:   true,
