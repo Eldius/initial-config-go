@@ -98,3 +98,13 @@ func (l *logger) WithExtraData(key string, value interface{}) Logger {
 		l: l.l.With(key, value),
 	}
 }
+
+func (l *logger) WithExtraDataMap(data map[string]interface{}) Logger {
+	log := l.l
+	for k, v := range data {
+		log = log.With(k, v)
+	}
+	return &logger{
+		l: log,
+	}
+}
