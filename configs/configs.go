@@ -32,5 +32,7 @@ func GetLogFormat() string {
 }
 
 func GetLogKeysToRedact() []string {
-	return viper.GetStringSlice(LogKeysToRedactKey)
+	return sync.OnceValue(func() []string {
+		return viper.GetStringSlice(LogKeysToRedactKey)
+	})()
 }
