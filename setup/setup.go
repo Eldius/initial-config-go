@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	EmptyAppNameError = errors.New("appName is empty")
+	ErrEmptyAppName = errors.New("appName is empty")
 )
 
 type Options struct {
@@ -107,7 +107,7 @@ func WithDefaultValues(vals map[string]any) OptionFunc {
 // for spf13/viper and slog libraries
 func InitSetup(appName string, opts ...OptionFunc) error {
 	if appName == "" {
-		return fmt.Errorf("invalid app name: %ww", EmptyAppNameError)
+		return fmt.Errorf("invalid app name: %ww", ErrEmptyAppName)
 	}
 
 	cfg := Options{}

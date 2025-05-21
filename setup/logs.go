@@ -13,12 +13,12 @@ import (
 )
 
 var (
-	InvalidLogOutputConfigErr = errors.New("invalid log output configuration: should enable stdout or define an output file")
+	ErrInvalidLogOutputConfig = errors.New("invalid log output configuration: should enable stdout or define an output file")
 )
 
 func setupLogs(appName, format, level, logOutputFile string, stdout bool, keysToRedact ...string) error {
 	if !stdout && logOutputFile == "" {
-		return fmt.Errorf("%w: logOutputFile: %s / stdout: %v", InvalidLogOutputConfigErr, logOutputFile, stdout)
+		return fmt.Errorf("%w: logOutputFile: %s / stdout: %v", ErrInvalidLogOutputConfig, logOutputFile, stdout)
 	}
 
 	for i, key := range keysToRedact {
@@ -27,7 +27,7 @@ func setupLogs(appName, format, level, logOutputFile string, stdout bool, keysTo
 
 	writer, err := getWriter(logOutputFile, stdout)
 	if err != nil {
-		return fmt.Errorf("%w: %v", InvalidLogOutputConfigErr, err)
+		return fmt.Errorf("%w: %v", ErrInvalidLogOutputConfig, err)
 	}
 	h, err := logHandler(format, level, writer, keysToRedact...)
 	if err != nil {
