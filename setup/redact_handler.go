@@ -2,6 +2,7 @@ package setup
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"maps"
 	"reflect"
@@ -26,41 +27,55 @@ func (r *redactHandler) Enabled(ctx context.Context, level slog.Level) bool {
 }
 
 func (r *redactHandler) Handle(ctx context.Context, record slog.Record) error {
-	return r.h.Handle(ctx, record)
-}
-
-func (r *redactHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	fmt.Printf("keysToRedact: %#v\n", r.keysToRedact)
 	if len(r.keysToRedact) == 0 {
-		return &redactHandler{h: r.h.WithAttrs(attrs)}
+		fmt.Println("redact handler: no keys to redact")
+		return r.h.Handle(ctx, record)
 	}
 
-	var mapValueIDs []int
-	//var structValueIDs []int
-	for i, attr := range attrs {
+	fmt.Printf("record attrs count: %d\n", record.NumAttrs())
+	fmt.Printf("record info: %#v\n", record)
+	var attrs []slog.Attr
+	record.Attrs(func(attr slog.Attr) bool {
+		fmt.Printf("- new loop (%s)\n", attr.Key)
 		for _, key := range r.keysToRedact {
 			if strings.Contains(strings.ToLower(attr.Key), key) {
-				attrs[i].Value = slog.StringValue("***")
-				continue
+				attrs = append(attrs, slog.String(attr.Key, "***"))
+				fmt.Printf("- continue 0 (%s)\n", key)
+				return true
 			}
 
 			if attr.Value.Kind() == slog.KindAny {
 				av := attr.Value.Any()
-				attrs[i].Value = slog.AnyValue(parseValue(av, r.keysToRedact))
+				fmt.Printf("- continue 1 (%s)\n", key)
+				attrs = append(attrs, slog.Any(attr.Key, parseValue(av, r.keysToRedact)))
 			}
 		}
-	}
+		attrs = append(attrs, attr)
+		fmt.Printf("- continue 2: %s\n", attr.Key)
+		return true
+	})
 
-	for _, i := range mapValueIDs {
-		if m, ok := attrs[i].Value.Any().(map[string]any); ok {
-			attrs[i].Value = slog.AnyValue(parseMap(m, r.keysToRedact))
-		}
-	}
+	fmt.Printf("attrs: %#v\n", attrs)
 
-	return &redactHandler{h: r.h.WithAttrs(attrs), keysToRedact: r.keysToRedact}
+	rec := slog.NewRecord(record.Time, record.Level, record.Message, record.PC)
+	rec.AddAttrs(attrs...)
+	return r.h.Handle(ctx, rec)
+
+}
+
+func (r *redactHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &redactHandler{
+		h:            r.h.WithAttrs(attrs),
+		keysToRedact: r.keysToRedact,
+	}
 }
 
 func (r *redactHandler) WithGroup(name string) slog.Handler {
-	return &redactHandler{h: r.h.WithGroup(name), keysToRedact: r.keysToRedact}
+	return &redactHandler{
+		h:            r.h.WithGroup(name),
+		keysToRedact: r.keysToRedact,
+	}
 }
 
 func parseMap(v map[string]any, redactedKeyList []string) map[string]any {

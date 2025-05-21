@@ -1,0 +1,48 @@
+?   	github.com/eldius/initial-config-go/configs	[no test files]
+?   	github.com/eldius/initial-config-go/logs	[no test files]
+goos: linux
+goarch: amd64
+pkg: github.com/eldius/initial-config-go/setup
+cpu: 12th Gen Intel(R) Core(TM) i7-12700H
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_no_keys_to_redact-20         	  962343	      1128 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_no_keys_to_redact-20         	 1000000	      1117 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_no_keys_to_redact-20         	  990328	      1165 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_no_keys_to_redact-20         	  956248	      1180 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_no_keys_to_redact-20         	  952348	      1194 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_no_keys_to_redact-20         	 1000000	      1140 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_no_keys_to_redact-20         	  938618	      1202 ns/op	     913 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_no_keys_to_redact-20         	  937150	      1167 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_no_keys_to_redact-20         	 1000000	      1138 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_no_keys_to_redact-20         	 1000000	      1122 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_1_key_to_redact-20           	  989258	      1194 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_1_key_to_redact-20           	  963360	      1186 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_1_key_to_redact-20           	 1000000	      1201 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_1_key_to_redact-20           	  913389	      1189 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_1_key_to_redact-20           	  996039	      1180 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_1_key_to_redact-20           	  835903	      1219 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_1_key_to_redact-20           	  980373	      1171 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_1_key_to_redact-20           	  977836	      1192 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_1_key_to_redact-20           	 1012466	      1179 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_1_key_to_redact-20           	  939902	      1193 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_2_keys_to_redact-20          	  951294	      1265 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_2_keys_to_redact-20          	  914356	      1249 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_2_keys_to_redact-20          	  887907	      1259 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_2_keys_to_redact-20          	  927718	      1294 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_2_keys_to_redact-20          	  855112	      1257 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_2_keys_to_redact-20          	  938344	      1253 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_2_keys_to_redact-20          	  872643	      1263 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_2_keys_to_redact-20          	  927160	      1250 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_2_keys_to_redact-20          	  905137	      1268 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_2_keys_to_redact-20          	  960950	      1250 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_3_keys_to_redact-20          	  898502	      1278 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_3_keys_to_redact-20          	  909732	      1278 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_3_keys_to_redact-20          	  889251	      1337 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_3_keys_to_redact-20          	  838058	      1347 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_3_keys_to_redact-20          	  812560	      1298 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_3_keys_to_redact-20          	  811801	      1331 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_3_keys_to_redact-20          	  917646	      1292 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_3_keys_to_redact-20          	  877572	      1304 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_3_keys_to_redact-20          	  885592	      1298 ns/op	     912 B/op	      15 allocs/op
+BenchmarkRedactHandler/simple_string_attr_values/using_simple_string_attributes_and_3_keys_to_redact-20          	  780423	      1287 ns/op	     912 B/op	      15 allocs/op
+PASS
+ok  	github.com/eldius/initial-config-go/setup	48.038s

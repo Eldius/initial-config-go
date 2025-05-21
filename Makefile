@@ -61,3 +61,10 @@ release: test lint vulncheck
 	git push --tags
 	@echo "------------------------------"
 	@echo ""
+
+benchmark:
+	go test \
+		-bench=. \
+		-benchmem \
+		-count=20 \
+			./...

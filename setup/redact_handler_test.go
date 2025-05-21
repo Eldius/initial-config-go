@@ -76,7 +76,7 @@ func TestRedactValues_Handler(t *testing.T) {
 	})
 
 	t.Run("running the default slog tests", func(t *testing.T) {
-		handler, buf := newTestRedactedHandler(t, nil)
+		handler, buf := newTestRedactHandler(t, nil)
 		results := func() []map[string]any {
 			var ms []map[string]any
 			for _, line := range bytes.Split(buf.Bytes(), []byte{'\n'}) {
@@ -101,7 +101,7 @@ func TestRedactValues_Handler(t *testing.T) {
 	})
 
 	t.Run("given a non redacted key it should not be changed", func(t *testing.T) {
-		handler, buf := newTestRedactedHandler(t, []string{"redacted-key"})
+		handler, buf := newTestRedactHandler(t, []string{"redacted-key"})
 		l := slog.New(handler)
 
 		l.With(slog.String("my_key", "not redacted")).Info("firstTest")
@@ -125,7 +125,7 @@ func TestRedactValues_Handler(t *testing.T) {
 	})
 
 	t.Run("given a record with redacted key in a map value it must be changed", func(t *testing.T) {
-		handler, buf := newTestRedactedHandler(t, []string{"authentication"})
+		handler, buf := newTestRedactHandler(t, []string{"authentication"})
 		l := slog.New(handler)
 
 		l.With("request", map[string]any{
@@ -155,7 +155,7 @@ func TestRedactValues_Handler(t *testing.T) {
 	})
 
 	t.Run("given a record with redacted key in a struct value it must be changed", func(t *testing.T) {
-		handler, buf := newTestRedactedHandler(t, []string{"authentication"})
+		handler, buf := newTestRedactHandler(t, []string{"authentication"})
 		l := slog.New(handler)
 
 		l.With("request", map[string]any{
@@ -199,14 +199,17 @@ func getLogEntryAttrValue(t *testing.T, m map[string]any, keys ...string) any {
 	return nil
 }
 
-func newTestRedactedHandler(t *testing.T, redactedKeys []string) (slog.Handler, *bytes.Buffer) {
+func newTestRedactHandler(t *testing.T, redactedKeys []string) (slog.Handler, *bytes.Buffer) {
 	t.Helper()
 
 	var buf bytes.Buffer
 	return newRedactHandler(
 		slog.NewJSONHandler(
 			&buf,
-			&slog.HandlerOptions{ReplaceAttr: logAttrsReplacerFunc()},
+			&slog.HandlerOptions{
+				ReplaceAttr: logAttrsReplacerFunc(),
+				Level:       slog.LevelDebug,
+			},
 		),
 		redactedKeys,
 	), &buf
