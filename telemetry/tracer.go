@@ -68,3 +68,8 @@ func GetTracer(tracerName string, opts ...trace.TracerOption) trace.Tracer {
 func GetCurrentSpan(ctx context.Context, tracerName string, opts ...trace.TracerOption) trace.Span {
 	return trace.SpanFromContext(ctx)
 }
+
+// NewSpan creates and starts a new trace span with the provided context, trace name, and optional span start options.
+func NewSpan(ctx context.Context, traceName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+	return otel.Tracer("").Start(ctx, traceName, opts...)
+}
