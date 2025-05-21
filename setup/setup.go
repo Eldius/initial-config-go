@@ -1,9 +1,11 @@
 package setup
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/eldius/initial-config-go/configs"
+	"github.com/eldius/initial-config-go/telemetry"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 	"golang.org/x/exp/maps"
@@ -22,6 +24,7 @@ type Options struct {
 	DefaultCfgFileLocations []string
 	DefaultCfgFileName      string
 	DefaultValues           map[string]any
+	OpenTelemetryOptions    []telemetry.Option
 }
 
 func (o *Options) GetDefaultValues() map[string]any {
@@ -41,6 +44,14 @@ func (o *Options) GetDefaultValues() map[string]any {
 	return o.DefaultValues
 }
 
+// WithOpenTelemetryOptions sets OpenTelemetry options
+func WithOpenTelemetryOptions(opts ...telemetry.Option) OptionFunc {
+	return func(o *Options) {
+		o.OpenTelemetryOptions = opts
+	}
+}
+
+// GetDefaultCfgFileName returns default config file name
 func (o *Options) GetDefaultCfgFileName() string {
 	if o.DefaultCfgFileName == "" {
 		o.DefaultCfgFileName = "config"
@@ -49,6 +60,7 @@ func (o *Options) GetDefaultCfgFileName() string {
 	return o.DefaultCfgFileName
 }
 
+// GetDefaultCfgFileLocations returns default config file locations
 func (o *Options) GetDefaultCfgFileLocations(appName string) []string {
 	if o.DefaultCfgFileLocations == nil {
 		o.DefaultCfgFileLocations = []string{
@@ -89,10 +101,10 @@ func WithConfigFileToBeUsed(file string) OptionFunc {
 // Default configuration keys:
 //   - Logs configuration
 //   - Log level:
-//   - Log format:            `log.format` (accepts `text` or `json`)
-//   - Log level:             `log.level` (accepts `info`, `debug`, `warn` or `error`)
-//   - Log output file:       `log.output_to_file` (output file path as a string)
-//   - Log to stdout:         `log.output_to_stdout` (accepts `true` or `false`)
+//   - Log format: `log.format` (accepts `text` or `json`)
+//   - Log level: `log.level` (accepts `info`, `debug`, `warn` or `error`)
+//   - Log output file: `log.output_to_file` (output file path as a string)
+//   - Log to stdout: `log.output_to_stdout` (accepts `true` or `false`)
 func WithDefaultValues(vals map[string]any) OptionFunc {
 	return func(o *Options) {
 		if o.DefaultValues == nil {
@@ -118,7 +130,7 @@ func InitSetup(appName string, opts ...OptionFunc) error {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfg.CfgFilePathToBeUsed)
 	} else {
-		// Find home directory.
+		// Find a home directory.
 		home, err := homedir.Dir()
 		if err != nil {
 			log.Println(err)
@@ -148,6 +160,10 @@ func InitSetup(appName string, opts ...OptionFunc) error {
 		log.Println("Using config file:", viper.ConfigFileUsed())
 	} else {
 		log.Printf("Could not find config file using default values: %s", err)
+	}
+
+	if err := telemetry.InitTelemetry(context.Background(), cfg.OpenTelemetryOptions...); err != nil {
+		return err
 	}
 
 	if err := setupLogs(
