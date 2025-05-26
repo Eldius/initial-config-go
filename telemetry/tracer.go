@@ -17,11 +17,11 @@ import (
 
 func tracerProvider(ctx context.Context, cfg OTELConfigs) error {
 	l := slog.Default()
-	l.Debug(fmt.Sprintf("configuring trace export for '%s'", cfg.Endpoint))
+	l.Debug(fmt.Sprintf("configuring trace export for '%s'", cfg.Endpoints.Traces))
 
 	var err error
 	conn, err := grpc.NewClient(
-		cfg.Endpoint,
+		cfg.Endpoints.Traces,
 		// Note the use of insecure transport here. TLS is recommended in production.
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)

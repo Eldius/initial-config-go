@@ -18,7 +18,7 @@ import (
 // meterProvider sets up the metrics provider
 func meterProvider(ctx context.Context, cfg OTELConfigs) error {
 	l := slog.Default().With(
-		slog.String("exporter_endpoint", cfg.Endpoint),
+		slog.String("exporter_endpoint", cfg.Endpoints.Metrics),
 	)
 	l.Debug("configuring metric exporter")
 
@@ -26,7 +26,7 @@ func meterProvider(ctx context.Context, cfg OTELConfigs) error {
 
 	opts = append(opts,
 		otlpmetricgrpc.WithInsecure(),
-		otlpmetricgrpc.WithEndpoint(cfg.Endpoint),
+		otlpmetricgrpc.WithEndpoint(cfg.Endpoints.Metrics),
 		otlpmetricgrpc.WithCompressor(gzip.Name),
 		otlpmetricgrpc.WithTimeout(10*time.Second))
 
@@ -51,8 +51,8 @@ func defaultResources(cfg OTELConfigs) *resource.Resource {
 	res := resource.NewWithAttributes(
 		semconv.SchemaURL,
 		semconv.ServiceNameKey.String(cfg.Service.Name),
-		semconv.ServiceVersionKey.String("0"),
-		attribute.String("environment", "test"),
+		semconv.ServiceVersionKey.String(cfg.Service.Version),
+		attribute.String("environment", cfg.Service.Environment),
 	)
 	return res
 }

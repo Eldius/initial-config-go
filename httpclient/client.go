@@ -7,11 +7,11 @@ import (
 )
 
 func NewClient() *http.Client {
-	if otel.GetTracerProvider() == nil {
-		return &http.Client{}
+	if traceProvider := otel.GetTracerProvider(); traceProvider != nil {
+		return &http.Client{
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
+		}
 	}
 
-	return &http.Client{
-		Transport: otelhttp.NewTransport(http.DefaultTransport),
-	}
+	return &http.Client{}
 }
