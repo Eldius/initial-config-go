@@ -3,8 +3,9 @@
 It's a simple library to try to not repeat myself on
 configurations on each new project I start.
 
-It configures `Viper` configuration, `slog` structured
-(including log keys formatting) logs and maybe another
+It defines `Viper`'s initial configuration,
+`slog` structured logs (including log keys
+formatting) and maybe some other
 things to help application startup.
 
 
