@@ -1,0 +1,37 @@
+---
+services:
+  otlp:
+    image: grafana/otel-lgtm:latest
+    container_name: otlp
+    hostname: otlp
+    environment:
+#      ENABLE_LOGS_ALL: "true"
+      ENABLE_LOGS_GRAFANA: "false"
+      ENABLE_LOGS_LOKI: "false"
+      ENABLE_LOGS_PROMETHEUS: "false"
+      ENABLE_LOGS_TEMPO: "false"
+      ENABLE_LOGS_PYROSCOPE: "false"
+      ENABLE_LOGS_OTELCOL: "true"
+    mem_limit: 1G
+    volumes:
+      - ./scripts/otel_lgtm_healthcheck.sh:/opt/health-check.sh:ro
+    ports:
+      - "3000:3000/tcp" # web interface
+      - "4317:4317/tcp" # GRPC ingestion port
+      - "4318:4318/tcp" # HTTP ingestion port
+    healthcheck:
+      test: /opt/health-check.sh
+      interval: 1m
+      timeout: 10s
+      retries: 10
+      start_period: 10s
+      start_interval: 10s
+  app:
+    build:
+      context: .
+      dockerfile: dockerfiles/telemetry.Dockerfile
+    container_name: app
+    mem_limit: 64M
+    depends_on:
+      otlp:
+        condition: service_healthy

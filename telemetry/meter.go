@@ -24,10 +24,15 @@ func meterProvider(ctx context.Context, cfg OTELConfigs) error {
 
 	var opts []otlpmetricgrpc.Option
 
+	conn, err := newGrpcConnection(cfg.Endpoints.Metrics)
+	if err != nil {
+		return fmt.Errorf("creating metric exporter grpc client: %w", err)
+	}
+
 	opts = append(opts,
 		otlpmetricgrpc.WithInsecure(),
-		otlpmetricgrpc.WithEndpoint(cfg.Endpoints.Metrics),
 		otlpmetricgrpc.WithCompressor(gzip.Name),
+		otlpmetricgrpc.WithGRPCConn(conn),
 		otlpmetricgrpc.WithTimeout(10*time.Second))
 
 	exporter, err := otlpmetricgrpc.New(
@@ -39,7 +44,7 @@ func meterProvider(ctx context.Context, cfg OTELConfigs) error {
 	}
 
 	provider := sdkmetric.NewMeterProvider(
-		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter)),
+		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter, sdkmetric.WithInterval(10*time.Second))),
 		sdkmetric.WithResource(defaultResources(cfg)))
 
 	// set global meter provider

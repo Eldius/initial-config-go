@@ -68,3 +68,9 @@ benchmark:
 		-benchmem \
 		-count=20 \
 			./...
+
+telemetry-example-down:
+	docker compose -f docker-compose-telemetry.yml down
+
+telemetry-example: telemetry-example-down
+	COMPOSE_BAKE=true docker compose -f docker-compose-telemetry.yml up --build

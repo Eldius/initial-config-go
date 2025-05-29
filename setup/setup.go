@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 )
 
 var (
@@ -20,11 +21,12 @@ var (
 )
 
 type Options struct {
-	CfgFilePathToBeUsed     string
-	DefaultCfgFileLocations []string
-	DefaultCfgFileName      string
 	DefaultValues           map[string]any
+	CfgFilePathToBeUsed     string
+	DefaultCfgFileName      string
+	EnvPrefix               string
 	OpenTelemetryOptions    []telemetry.Option
+	DefaultCfgFileLocations []string
 }
 
 func (o *Options) GetDefaultValues() map[string]any {
@@ -71,6 +73,13 @@ func (o *Options) GetDefaultCfgFileLocations(appName string) []string {
 	return o.DefaultCfgFileLocations
 }
 
+func (o *Options) GetEnvPrefix() string {
+	if o.EnvPrefix == "" {
+		return "app"
+	}
+	return o.EnvPrefix
+}
+
 // OptionFunc customization option
 type OptionFunc func(*Options)
 
@@ -115,6 +124,13 @@ func WithDefaultValues(vals map[string]any) OptionFunc {
 	}
 }
 
+// WithEnvPrefix defines the environment variable prefix to be used
+func WithEnvPrefix(prefix string) OptionFunc {
+	return func(o *Options) {
+		o.EnvPrefix = strings.ToLower(prefix)
+	}
+}
+
 // InitSetup sets up application default configurations
 // for spf13/viper and slog libraries
 func InitSetup(appName string, opts ...OptionFunc) error {
@@ -127,7 +143,7 @@ func InitSetup(appName string, opts ...OptionFunc) error {
 		opt(&cfg)
 	}
 	if cfg.CfgFilePathToBeUsed != "" {
-		// Use config file from the flag.
+		// Use the config file from the flag.
 		viper.SetConfigFile(cfg.CfgFilePathToBeUsed)
 	} else {
 		// Find a home directory.
@@ -153,6 +169,9 @@ func InitSetup(appName string, opts ...OptionFunc) error {
 
 	setDefaults(cfg.GetDefaultValues())
 
+	viper.SetEnvPrefix(cfg.GetEnvPrefix())
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
@@ -162,19 +181,31 @@ func InitSetup(appName string, opts ...OptionFunc) error {
 		log.Printf("Could not find config file using default values: %s", err)
 	}
 
-	if err := telemetry.InitTelemetry(context.Background(), cfg.OpenTelemetryOptions...); err != nil {
-		return err
-	}
-
 	if err := setupLogs(
 		appName,
 		configs.GetLogFormat(),
 		configs.GetLogLevel(),
-		configs.GetLogOutput(),
+		configs.GetLogOutputFile(),
 		configs.GetLogToStdout(),
 		configs.GetLogKeysToRedact()...,
 	); err != nil {
 		return fmt.Errorf("setupLogs: %w", err)
+	}
+
+	if len(cfg.OpenTelemetryOptions) == 0 {
+		cfg.OpenTelemetryOptions = []telemetry.Option{
+			telemetry.WithService(appName, "", ""),
+		}
+
+		if tracesEndpoint := configs.GetTraceBackendEndpoint(); tracesEndpoint != "" {
+			cfg.OpenTelemetryOptions = append(cfg.OpenTelemetryOptions, telemetry.WithTraceEndpoint(tracesEndpoint))
+		}
+		if metricsEndpoint := configs.GetMetricsBackendEndpoint(); metricsEndpoint != "" {
+			cfg.OpenTelemetryOptions = append(cfg.OpenTelemetryOptions, telemetry.WithMetricEndpoint(metricsEndpoint))
+		}
+	}
+	if err := telemetry.InitTelemetry(context.Background(), cfg.OpenTelemetryOptions...); err != nil {
+		return err
 	}
 
 	return nil

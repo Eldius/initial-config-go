@@ -3,6 +3,7 @@ package logs
 import (
 	"context"
 	"fmt"
+	"github.com/eldius/initial-config-go/telemetry"
 	"log/slog"
 )
 
@@ -54,7 +55,8 @@ func NewLogger(ctx context.Context, fields ...KeyValueData) Logger {
 		l = l.With(field.Key, field.Value)
 		ctx = addDataToContext(ctx, field)
 	}
-
+	trace := telemetry.GetSpanDataFromContext(ctx)
+	l = l.With(slog.String("trace_id", trace.TraceID), slog.String("span_id", trace.SpanID))
 	return &logger{
 		l:   l,
 		ctx: ctx,

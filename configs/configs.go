@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-func GetLogOutput() string {
+func GetLogOutputFile() string {
 	return sync.OnceValue(func() string {
 		return viper.GetString(LogOutputFileKey)
 	})()
@@ -34,5 +34,17 @@ func GetLogFormat() string {
 func GetLogKeysToRedact() []string {
 	return sync.OnceValue(func() []string {
 		return viper.GetStringSlice(LogKeysToRedactKey)
+	})()
+}
+
+func GetTraceBackendEndpoint() string {
+	return sync.OnceValue(func() string {
+		return viper.GetString(TelemetryTracesBackendEndpointKey)
+	})()
+}
+
+func GetMetricsBackendEndpoint() string {
+	return sync.OnceValue(func() string {
+		return viper.GetString(TelemetryMetricsBackendEndpointKey)
 	})()
 }

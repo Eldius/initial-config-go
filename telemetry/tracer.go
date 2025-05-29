@@ -2,46 +2,65 @@ package telemetry
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"go.opentelemetry.io/otel/trace"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/encoding/gzip"
 	"log/slog"
+	"time"
+)
+
+var (
+	ErrTraceExporterInitialization = errors.New("failed to start traces exporter")
 )
 
 func tracerProvider(ctx context.Context, cfg OTELConfigs) error {
 	l := slog.Default()
 	l.Debug(fmt.Sprintf("configuring trace export for '%s'", cfg.Endpoints.Traces))
 
-	var err error
-	conn, err := grpc.NewClient(
-		cfg.Endpoints.Traces,
-		// Note the use of insecure transport here. TLS is recommended in production.
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
+	conn, err := newGrpcConnection(cfg.Endpoints.Traces)
 	if err != nil {
-		l.With("error", err).Error("failed to create gRPC connection to collector")
-		panic(err)
+		l.With("error", err).Error("failed to create gRPC connection")
+		return err
 	}
 
-	exporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(conn))
+	slog.With("tracer_grpc_conn_status", conn.GetState()).Debug("gRPC connection to collector established")
+
+	exporter, err := otlptracegrpc.New(
+		ctx,
+		otlptracegrpc.WithInsecure(),
+		otlptracegrpc.WithCompressor(gzip.Name),
+		otlptracegrpc.WithGRPCConn(conn),
+		otlptracegrpc.WithTLSCredentials(insecure.NewCredentials()),
+		otlptracegrpc.WithTimeout(10*time.Second))
 	if err != nil {
 		l.With("error", err).Error("failed to setup exporter")
-		panic(err)
+		return err
 	}
 
+	if err := exporter.Start(ctx); err != nil {
+		return fmt.Errorf("%w: %w", ErrTraceExporterInitialization, err)
+	}
 	res := resource.NewWithAttributes(
 		semconv.SchemaURL,
 		semconv.ServiceNameKey.String(cfg.Service.Name),
 		semconv.ServiceVersionKey.String(cfg.Service.Version),
 		attribute.String("environment", cfg.Service.Environment),
 	)
+
+	prop := propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	)
+	otel.SetTextMapPropagator(prop)
 
 	// Register the trace exporter with a TracerProvider, using a batch
 	// span processor to aggregate spans before export.
@@ -72,4 +91,19 @@ func GetCurrentSpan(ctx context.Context, tracerName string, opts ...trace.Tracer
 // NewSpan creates and starts a new trace span with the provided context, trace name, and optional span start options.
 func NewSpan(ctx context.Context, traceName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 	return otel.Tracer("").Start(ctx, traceName, opts...)
+}
+
+type TracingIDs struct {
+	TraceID string
+	SpanID  string
+}
+type tracingDataKey struct{}
+
+func GetSpanDataFromContext(ctx context.Context) TracingIDs {
+	traceID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+	spanID := trace.SpanFromContext(ctx).SpanContext().SpanID().String()
+	return TracingIDs{
+		TraceID: traceID,
+		SpanID:  spanID,
+	}
 }

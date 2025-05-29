@@ -1,6 +1,11 @@
 package telemetry
 
-import "context"
+import (
+	"context"
+	"github.com/go-logr/logr"
+	"go.opentelemetry.io/otel"
+	"log/slog"
+)
 
 type OTELConfigs struct {
 	Service struct {
@@ -35,6 +40,8 @@ func InitTelemetry(ctx context.Context, telemetryOpts ...Option) error {
 	if !cfg.IsEnabled() {
 		return nil
 	}
+
+	otel.SetLogger(logr.FromSlogHandler(slog.Default().Handler()))
 
 	if err := meterProvider(ctx, *cfg); err != nil {
 		return err
