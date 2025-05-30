@@ -21,6 +21,7 @@ func meterProvider(ctx context.Context, cfg OTELConfigs) error {
 		slog.String("exporter_endpoint", cfg.Endpoints.Metrics),
 	)
 	l.Debug("configuring metric exporter")
+	fmt.Println("configuring metric exporter")
 
 	var opts []otlpmetricgrpc.Option
 
@@ -49,6 +50,8 @@ func meterProvider(ctx context.Context, cfg OTELConfigs) error {
 
 	// set global meter provider
 	otel.SetMeterProvider(provider)
+
+	fmt.Println("metric exporter configured")
 	return nil
 }
 

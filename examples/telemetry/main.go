@@ -12,6 +12,10 @@ import (
 	"time"
 )
 
+var (
+	AppVersion string
+)
+
 /*
 Programmatically configuring telemetry components.
 */
@@ -22,10 +26,10 @@ func main() {
 		setup.WithEnvPrefix("telemetry"),
 		setup.WithDefaultCfgFileName("config"),
 		setup.WithOpenTelemetryOptions(
-			telemetry.WithTraceEndpoint("otlp:55689"),
-			telemetry.WithMetricEndpoint("otlp:55690"),
-			telemetry.WithOtelEnabled(true),
-			telemetry.WithService("telemetry-example-app", "1.0.0", "dev"),
+			//telemetry.WithTraceEndpoint("otlp:4317"),
+			//telemetry.WithMetricEndpoint("otlp:4317"),
+			//telemetry.WithOtelEnabled(true),
+			telemetry.WithService("telemetry-example-app", AppVersion, "dev"),
 		),
 		setup.WithDefaultValues(map[string]any{}),
 	); err != nil {

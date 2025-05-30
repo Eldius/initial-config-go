@@ -5,3 +5,11 @@ log:
   format: json
   output_to_file: execution.log
   output_to_stdout: true
+telemetry:
+  enabled: true
+  traces:
+#    endpoint: "otlp:4317"
+    endpoint: 192.168.0.166:55689
+  metrics:
+#    endpoint: "otlp:4317"
+    endpoint: "192.168.0.166:55690"

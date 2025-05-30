@@ -25,6 +25,7 @@ var (
 func tracerProvider(ctx context.Context, cfg OTELConfigs) error {
 	l := slog.Default()
 	l.Debug(fmt.Sprintf("configuring trace export for '%s'", cfg.Endpoints.Traces))
+	fmt.Println(fmt.Sprintf("configuring trace export for '%s'", cfg.Endpoints.Traces))
 
 	conn, err := newGrpcConnection(cfg.Endpoints.Traces)
 	if err != nil {
@@ -32,7 +33,10 @@ func tracerProvider(ctx context.Context, cfg OTELConfigs) error {
 		return err
 	}
 
-	slog.With("tracer_grpc_conn_status", conn.GetState()).Debug("gRPC connection to collector established")
+	l.With(
+		"tracer_grpc_conn_status",
+		conn.GetState().String(),
+	).Debug("gRPC connection to collector established")
 
 	exporter, err := otlptracegrpc.New(
 		ctx,
@@ -46,9 +50,6 @@ func tracerProvider(ctx context.Context, cfg OTELConfigs) error {
 		return err
 	}
 
-	if err := exporter.Start(ctx); err != nil {
-		return fmt.Errorf("%w: %w", ErrTraceExporterInitialization, err)
-	}
 	res := resource.NewWithAttributes(
 		semconv.SchemaURL,
 		semconv.ServiceNameKey.String(cfg.Service.Name),
@@ -75,6 +76,7 @@ func tracerProvider(ctx context.Context, cfg OTELConfigs) error {
 	otel.SetTracerProvider(provider)
 	//tracerInstance = provider.Tracer(cfg.Service.Name)
 
+	fmt.Println("trace exporter configured")
 	return nil
 }
 

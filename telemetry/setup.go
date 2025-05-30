@@ -2,9 +2,13 @@ package telemetry
 
 import (
 	"context"
+	"fmt"
+	"github.com/eldius/initial-config-go/configs"
 	"github.com/go-logr/logr"
+	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 	"log/slog"
+	"time"
 )
 
 type OTELConfigs struct {
@@ -21,6 +25,7 @@ type OTELConfigs struct {
 }
 
 func (t *OTELConfigs) IsEnabled() bool {
+	fmt.Printf("t.Enabled: %v\nt.Endpoints.Traces: %s\nt.Endpoints.Metrics: %s\n", t.Enabled, t.Endpoints.Traces, t.Endpoints.Metrics)
 	return t.Enabled && t.Endpoints.Traces != "" && t.Endpoints.Metrics != ""
 }
 
@@ -37,6 +42,28 @@ func InitTelemetry(ctx context.Context, telemetryOpts ...Option) error {
 	for _, opt := range telemetryOpts {
 		opt(cfg)
 	}
+
+	if cfg.Endpoints.Traces == "" {
+		endpoint := configs.GetTraceBackendEndpoint()
+		if endpoint != "" {
+			cfg.Enabled = true
+		}
+		cfg.Endpoints.Traces = endpoint
+	}
+	if cfg.Endpoints.Metrics == "" {
+		endpoint := configs.GetMetricsBackendEndpoint()
+		if endpoint != "" {
+			cfg.Enabled = true
+		}
+		cfg.Endpoints.Metrics = endpoint
+	}
+
+	l := slog.With(
+		"component", "telemetry",
+		"enabled", cfg.IsEnabled())
+
+	l.Debug("configuring telemetry")
+
 	if !cfg.IsEnabled() {
 		return nil
 	}
@@ -48,6 +75,13 @@ func InitTelemetry(ctx context.Context, telemetryOpts ...Option) error {
 	}
 	if err := tracerProvider(ctx, *cfg); err != nil {
 		return err
+	}
+
+	// Start the runtime instrumentation
+	if err := runtime.Start(
+		runtime.WithMinimumReadMemStatsInterval(5 * time.Second),
+	); err != nil {
+		return fmt.Errorf("failed to start runtime instrumentation: %w", err)
 	}
 	return nil
 }
@@ -62,7 +96,7 @@ func WithTraceEndpoint(endpoint string) Option {
 // WithMetricEndpoint sets the endpoint for the metrics exporter.
 func WithMetricEndpoint(endpoint string) Option {
 	return func(cfg *OTELConfigs) {
-		cfg.Endpoints.Traces = endpoint
+		cfg.Endpoints.Metrics = endpoint
 	}
 }
 
