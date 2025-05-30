@@ -44,18 +44,14 @@ func InitTelemetry(ctx context.Context, telemetryOpts ...Option) error {
 	}
 
 	if cfg.Endpoints.Traces == "" {
-		endpoint := configs.GetTraceBackendEndpoint()
-		if endpoint != "" {
-			cfg.Enabled = true
-		}
-		cfg.Endpoints.Traces = endpoint
+		cfg.Endpoints.Traces = configs.GetTraceBackendEndpoint()
 	}
 	if cfg.Endpoints.Metrics == "" {
-		endpoint := configs.GetMetricsBackendEndpoint()
-		if endpoint != "" {
-			cfg.Enabled = true
-		}
-		cfg.Endpoints.Metrics = endpoint
+		cfg.Endpoints.Metrics = configs.GetMetricsBackendEndpoint()
+	}
+
+	if !cfg.Enabled {
+		cfg.Enabled = configs.GetTelemetryEnabled()
 	}
 
 	l := slog.With(

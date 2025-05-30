@@ -37,6 +37,12 @@ func GetLogKeysToRedact() []string {
 	})()
 }
 
+func GetTelemetryEnabled() bool {
+	return sync.OnceValue(func() bool {
+		return viper.GetBool(TelemetryEnabledKey)
+	})()
+}
+
 func GetTraceBackendEndpoint() string {
 	return sync.OnceValue(func() string {
 		return viper.GetString(TelemetryTracesBackendEndpointKey)
