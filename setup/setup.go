@@ -206,7 +206,7 @@ func InitSetup(appName string, opts ...OptionFunc) error {
 	}
 	fmt.Println("OpenTelemetry options:", cfg.OpenTelemetryOptions)
 
-	if err := telemetry.InitTelemetry(context.Background(), cfg.OpenTelemetryOptions...); err != nil {
+	if err := InitTelemetry(context.Background(), cfg.OpenTelemetryOptions...); err != nil {
 		return err
 	}
 
