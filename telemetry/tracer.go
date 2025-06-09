@@ -25,7 +25,6 @@ var (
 func tracerProvider(ctx context.Context, cfg OTELConfigs) error {
 	l := slog.Default()
 	l.Debug(fmt.Sprintf("configuring trace export for '%s'", cfg.Endpoints.Traces))
-	fmt.Println(fmt.Sprintf("configuring trace export for '%s'", cfg.Endpoints.Traces))
 
 	conn, err := newGrpcConnection(cfg.Endpoints.Traces)
 	if err != nil {
@@ -99,7 +98,6 @@ type TracingIDs struct {
 	TraceID string
 	SpanID  string
 }
-type tracingDataKey struct{}
 
 func GetSpanDataFromContext(ctx context.Context) TracingIDs {
 	traceID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
