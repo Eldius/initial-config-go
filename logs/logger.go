@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/eldius/initial-config-go/telemetry"
 	"log/slog"
+	"maps"
 )
 
 const (
@@ -33,27 +34,28 @@ type logger struct {
 	l   *slog.Logger
 }
 
-type KeyValueData struct {
-	Key   string
-	Value interface{}
-}
+type KeyValueData map[string]any
 
-func addDataToContext(ctx context.Context, field KeyValueData) context.Context {
+func addDataToContext(ctx context.Context, data ...KeyValueData) context.Context {
 	if values := ctx.Value(key); values != nil {
-		if m, ok := values.(map[string]interface{}); ok {
-			m[field.Key] = field.Value
+		if m, ok := values.(KeyValueData); ok {
+			for _, d := range data {
+				maps.Copy(m, d)
+			}
 			return context.WithValue(ctx, contextDataKey("logger"), m)
 		}
 	}
-	return context.WithValue(ctx, contextDataKey("logger"), map[string]interface{}{field.Key: field.Value})
+	return context.WithValue(ctx, contextDataKey("logger"), data)
 }
 
 // NewLogger creates a new Logger instance
 func NewLogger(ctx context.Context, fields ...KeyValueData) Logger {
 	l := slog.Default()
-	for _, field := range fields {
-		l = l.With(field.Key, field.Value)
-		ctx = addDataToContext(ctx, field)
+	ctx = addDataToContext(ctx, fields...)
+	for _, d := range fields {
+		for k, v := range d {
+			l = l.With(k, v)
+		}
 	}
 	trace := telemetry.GetSpanDataFromContext(ctx)
 	l = l.With(slog.String("trace_id", trace.TraceID), slog.String("span_id", trace.SpanID))
@@ -79,7 +81,7 @@ func (l *logger) Errorf(format string, args ...interface{}) {
 func (l *logger) Debug(msg string) {
 	l.l.DebugContext(l.ctx, msg)
 }
-func (l *logger) Infor(msg string) {
+func (l *logger) Info(msg string) {
 	l.l.InfoContext(l.ctx, msg)
 }
 func (l *logger) Warn(msg string) {

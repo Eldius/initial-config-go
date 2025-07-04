@@ -35,9 +35,9 @@ services:
     depends_on:
       otlp:
         condition: service_healthy
-#    logging:
-#      driver: "fluentd"
-#      options:
-#        fluentd-address: 192.168.0.166:6543
-#        tag: "{{.Name}}"
-#        mode: "non-blocking"
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: 192.168.0.166:6543
+        tag: "{{.Name}}"
+        mode: "non-blocking"
