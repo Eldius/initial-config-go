@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/eldius/initial-config-go/configs"
+	"github.com/eldius/initial-config-go/httpclient"
 	"github.com/eldius/initial-config-go/telemetry"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
@@ -21,6 +22,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/encoding/gzip"
 	"log/slog"
+	"net/http"
 	"time"
 )
 
@@ -66,6 +68,8 @@ func InitTelemetry(ctx context.Context, telemetryOpts ...telemetry.Option) error
 	if err := tracerProvider(ctx, *cfg); err != nil {
 		return err
 	}
+
+	http.DefaultClient = httpclient.NewClient()
 
 	// Start the runtime instrumentation
 	if err := runtime.Start(
