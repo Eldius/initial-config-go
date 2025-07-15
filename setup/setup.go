@@ -204,14 +204,9 @@ func InitSetup(appName string, opts ...OptionFunc) error {
 			cfg.OpenTelemetryOptions = append(cfg.OpenTelemetryOptions, telemetry.WithMetricEndpoint(metricsEndpoint))
 		}
 	}
-	fmt.Println("OpenTelemetry options:", cfg.OpenTelemetryOptions)
-
 	if err := InitTelemetry(context.Background(), cfg.OpenTelemetryOptions...); err != nil {
 		return err
 	}
-
-	fmt.Println("OpenTelemetry init finished.")
-
 	return nil
 }
 

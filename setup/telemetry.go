@@ -134,7 +134,6 @@ func tracerProvider(ctx context.Context, cfg telemetry.OTELConfigs) error {
 	// set global tracer provider & text propagators
 	otel.SetTracerProvider(provider)
 
-	fmt.Println("trace exporter configured")
 	return nil
 }
 
@@ -150,7 +149,6 @@ func meterProvider(ctx context.Context, cfg telemetry.OTELConfigs) error {
 		slog.String("exporter_endpoint", cfg.Endpoints.Metrics),
 	)
 	l.Debug("configuring metric exporter")
-	fmt.Println("configuring metric exporter")
 
 	var opts []otlpmetricgrpc.Option
 
@@ -180,7 +178,6 @@ func meterProvider(ctx context.Context, cfg telemetry.OTELConfigs) error {
 	// set global meter provider
 	otel.SetMeterProvider(provider)
 
-	fmt.Println("metric exporter configured")
 	return nil
 }
 
