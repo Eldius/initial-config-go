@@ -1,9 +1,5 @@
 package telemetry
 
-import (
-	"fmt"
-)
-
 type OTELConfigs struct {
 	Service struct {
 		Name        string
@@ -18,7 +14,6 @@ type OTELConfigs struct {
 }
 
 func (t *OTELConfigs) IsEnabled() bool {
-	fmt.Printf("t.Enabled: %v\nt.Endpoints.Traces: %s\nt.Endpoints.Metrics: %s\n", t.Enabled, t.Endpoints.Traces, t.Endpoints.Metrics)
 	return t.Enabled && t.Endpoints.Traces != "" && t.Endpoints.Metrics != ""
 }
 
