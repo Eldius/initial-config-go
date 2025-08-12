@@ -1,9 +1,10 @@
 package setup
 
 import (
+	"testing"
+
 	"github.com/eldius/initial-config-go/configs"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func Test_setupLogs(t *testing.T) {

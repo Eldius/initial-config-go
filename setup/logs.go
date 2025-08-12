@@ -3,13 +3,14 @@ package setup
 import (
 	"errors"
 	"fmt"
-	"github.com/eldius/initial-config-go/configs"
 	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/eldius/initial-config-go/configs"
 )
 
 var (

@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"net/http"
+	"time"
+
 	"github.com/eldius/initial-config-go/configs"
 	"github.com/eldius/initial-config-go/httpclient"
 	"github.com/eldius/initial-config-go/telemetry"
@@ -21,9 +25,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/encoding/gzip"
-	"log/slog"
-	"net/http"
-	"time"
 )
 
 var (
@@ -69,7 +70,7 @@ func InitTelemetry(ctx context.Context, telemetryOpts ...telemetry.Option) error
 		return err
 	}
 
-	http.DefaultClient = httpclient.NewClient()
+	http.DefaultClient = httpclient.NewHTTPClient()
 
 	// Start the runtime instrumentation
 	if err := runtime.Start(

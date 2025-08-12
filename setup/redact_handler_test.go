@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/eldius/initial-config-go/configs"
-	"github.com/stretchr/testify/assert"
 	"log"
 	"log/slog"
 	"maps"
@@ -13,6 +11,9 @@ import (
 	"strings"
 	"testing"
 	"testing/slogtest"
+
+	"github.com/eldius/initial-config-go/configs"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRedactValues_Handler(t *testing.T) {

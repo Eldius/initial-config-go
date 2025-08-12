@@ -4,16 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/eldius/initial-config-go/configs"
-	"github.com/eldius/initial-config-go/telemetry"
-	"github.com/mitchellh/go-homedir"
-	"github.com/spf13/viper"
-	"golang.org/x/exp/maps"
 	"log"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
+
+	"github.com/eldius/initial-config-go/configs"
+	"github.com/eldius/initial-config-go/telemetry"
+	"github.com/mitchellh/go-homedir"
+	"github.com/spf13/viper"
+	"golang.org/x/exp/maps"
 )
 
 var (
