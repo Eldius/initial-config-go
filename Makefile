@@ -58,6 +58,7 @@ release: test lint vulncheck
 	@echo ""
 
 	git tag $(VERSION)
+	git push
 	git push --tags
 	@echo "------------------------------"
 	@echo ""
