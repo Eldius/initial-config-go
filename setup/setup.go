@@ -21,6 +21,11 @@ var (
 	ErrEmptyAppName = errors.New("appName is empty")
 )
 
+type Prop struct {
+	Key   string
+	Value any
+}
+
 type Options struct {
 	DefaultValues           map[string]any
 	CfgFilePathToBeUsed     string
@@ -122,6 +127,26 @@ func WithDefaultValues(vals map[string]any) OptionFunc {
 			return
 		}
 		maps.Copy(o.DefaultValues, vals)
+	}
+}
+
+// WithProps adds properties definition to Viper configuration
+//
+// Default configuration keys:
+//   - Logs configuration
+//   - Log level:
+//   - Log format: `log.format` (accepts `text` or `json`)
+//   - Log level: `log.level` (accepts `info`, `debug`, `warn` or `error`)
+//   - Log output file: `log.output_to_file` (output file path as a string)
+//   - Log to stdout: `log.output_to_stdout` (accepts `true` or `false`)
+func WithProps(props ...Prop) OptionFunc {
+	return func(o *Options) {
+		if o.DefaultValues == nil {
+			o.DefaultValues = make(map[string]any)
+		}
+		for _, p := range props {
+			o.DefaultValues[p.Key] = p.Value
+		}
 	}
 }
 
