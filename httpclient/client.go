@@ -25,6 +25,7 @@ type customClient struct {
 }
 
 func NewHTTPClient() *http.Client {
+	var rt http.RoundTripper = http.DefaultTransport
 	if traceProvider := otel.GetTracerProvider(); traceProvider != nil {
 		return &http.Client{
 			Transport: &loggingRoundTripper{
@@ -33,11 +34,7 @@ func NewHTTPClient() *http.Client {
 		}
 	}
 
-	return &http.Client{
-		Transport: &loggingRoundTripper{
-			proxied: http.DefaultTransport,
-		},
-	}
+	return newLoggingClient(rt)
 }
 
 func NewClient() HttpClient {
