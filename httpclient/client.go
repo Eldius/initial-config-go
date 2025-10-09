@@ -64,11 +64,13 @@ func (c *customClient) Get(path string) (*http.Response, error) {
 }
 
 func (c *customClient) Post(url string, contentType string, body io.Reader) (resp *http.Response, err error) {
-	return c.c.Post(http.MethodPost, url, body)
+	return c.c.Post(url, contentType, body)
 }
+
 func (c *customClient) PostForm(url string, data url.Values) (resp *http.Response, err error) {
 	return c.c.PostForm(url, data)
 }
+
 func (c *customClient) Head(url string) (resp *http.Response, err error) {
 	return c.c.Head(url)
 }
