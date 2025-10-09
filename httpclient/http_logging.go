@@ -31,7 +31,9 @@ func (lrt *loggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 	resp, err := lrt.proxied.RoundTrip(req)
 
 	logData["duration"] = time.Since(start)
-	logData["response_body"] = extractResponseBody(resp)
+	if resp != nil {
+		logData["response_body"] = extractResponseBody(resp)
+	}
 
 	if err != nil {
 		log.With("error", err, "request", logData).Error("HTTPRequestFailed")
@@ -57,6 +59,10 @@ func extractRequestBody(req *http.Request) string {
 }
 
 func extractResponseBody(res *http.Response) string {
+	if res == nil {
+		slog.With("event", "extractResponseBody").Debug("NullResponse")
+		return ""
+	}
 	if res.Body == nil {
 		return ""
 	}
