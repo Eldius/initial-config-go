@@ -32,4 +32,8 @@ var (
 		TelemetryTracesBackendEndpointKey:  "",
 		TelemetryMetricsBackendEndpointKey: "",
 	}
+
+	DefaultConfigValuesLogFileMap   = addAttr(DefaultConfigValuesMap, LogOutputFileKey, "execution.log")
+	DefaultConfigValuesLogStdoutMap = addAttr(DefaultConfigValuesMap, LogOutputToStdoutKey, true)
+	DefaultConfigValuesLogAllMap    = addAttr(addAttr(DefaultConfigValuesMap, LogOutputToStdoutKey, true), LogOutputFileKey, "execution.log")
 )
