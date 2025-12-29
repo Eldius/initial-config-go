@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
+// HttpClient defines the interface for HTTP client operations with logging support.
 type HttpClient interface {
 	Get(url string) (resp *http.Response, err error)
 	Do(req *http.Request) (*http.Response, error)
@@ -24,6 +25,9 @@ type customClient struct {
 	log *slog.Logger
 }
 
+// NewHTTPClient creates a new HTTP client with OpenTelemetry instrumentation
+// and logging capabilities. If a tracer provider is configured, the client
+// will automatically propagate trace context in requests.
 func NewHTTPClient() *http.Client {
 	var rt = http.DefaultTransport
 	if traceProvider := otel.GetTracerProvider(); traceProvider != nil {
@@ -37,6 +41,8 @@ func NewHTTPClient() *http.Client {
 	return newLoggingClient(rt)
 }
 
+// NewClient creates a new HttpClient implementation with default configuration
+// and structured logging support.
 func NewClient() HttpClient {
 	return &customClient{
 		c:   NewHTTPClient(),

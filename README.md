@@ -89,43 +89,132 @@ Example (customization similar to the provided telemetry example):
 
 
 ## Configuration
-Configuration is powered by Viper and supports:
-- Defaults defined in code
-- YAML config file (config name and search paths configurable)
-- Environment variables (with configurable prefix and dot-to-underscore mapping)
 
-Default search locations (unless overridden):
-- ~/.<appName>
-- . (current directory)
+### Overview
+Configuration is powered by Viper and supports multiple sources in the following precedence order:
+1. Explicit values set via `setup.WithProps()` or `setup.WithDefaultValues()`
+2. Environment variables (with configurable prefix)
+3. YAML configuration file
+4. Default values
 
-Default config file name: `config` with type `yaml`.
+### Configuration Sources
 
-Environment variables:
-- Env prefix defaults to `app` (can be changed via `setup.WithEnvPrefix("<prefix>")`)
-- Dots in keys are replaced with underscores, and the prefix is uppercased
-  Example: key `log.level` with prefix `app` => env var `APP_LOG_LEVEL`
+#### Default Search Locations
+Unless overridden with `setup.WithDefaultCfgFileLocations()`:
+- `~/.<appName>/` - User home directory with app-specific folder
+- `~/` - User home directory
+- `.` - Current working directory
 
-Supported keys (see configs/constants.go):
-- log.format: one of `json`, `text`
-- log.level: one of `info`, `debug`, `warn`, `error`
-- log.output_to_file: string path to output file ("" means disabled)
-- log.output_to_stdout: boolean (default false)
-- log.redacted_keys: string slice of keys to be redacted from logs
-- telemetry.enabled: boolean (default false)
-- telemetry.traces.endpoint: string (OTLP gRPC/HTTP endpoint)
-- telemetry.metrics.endpoint: string (OTLP gRPC/HTTP endpoint)
+Default config file name: `config.yaml`
 
-Example environment variables (with default `app` prefix):
-- APP_LOG_FORMAT=json
-- APP_LOG_LEVEL=info
-- APP_LOG_OUTPUT_TO_FILE=execution.log
-- APP_LOG_OUTPUT_TO_STDOUT=true
-- APP_LOG_REDACTED_KEYS=token,password  (Viper also supports list in YAML)
-- APP_TELEMETRY_ENABLED=true
-- APP_TELEMETRY_TRACES_ENDPOINT=otlp:4317
-- APP_TELEMETRY_METRICS_ENDPOINT=otlp:4317
+#### Environment Variables
+- Prefix defaults to `APP` (customize via `setup.WithEnvPrefix("<prefix>")`)
+- Configuration keys use dot notation (e.g., `log.level`)
+- Environment variables use underscores and are uppercase (e.g., `APP_LOG_LEVEL`)
+- Conversion: dots (`.`) → underscores (`_`), lowercase → uppercase
 
-Note: Telemetry will only initialize exporters when enabled and endpoints are provided. See telemetry/setup.go for details.
+**Example**: `log.level` with prefix `app` → `APP_LOG_LEVEL`
+
+### Configuration Keys
+
+#### Logging Configuration
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `log.format` | string | `json` | Log output format: `json` or `text` |
+| `log.level` | string | `info` | Log level: `info`, `debug`, `warn`, or `error` |
+| `log.output_to_file` | string | `""` | Path to log output file (empty disables file logging) |
+| `log.output_to_stdout` | boolean | `false` | Enable logging to stdout |
+| `log.redacted_keys` | []string | `[]` | List of attribute keys to redact from logs (e.g., `password`, `token`) |
+
+**Note**: At least one of `log.output_to_file` or `log.output_to_stdout` must be enabled.
+
+#### Telemetry Configuration
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `telemetry.enabled` | boolean | `false` | Enable OpenTelemetry instrumentation |
+| `telemetry.traces.endpoint` | string | `""` | OTLP traces backend endpoint (e.g., `localhost:4317`) |
+| `telemetry.metrics.endpoint` | string | `""` | OTLP metrics backend endpoint (e.g., `localhost:4317`) |
+
+**Note**: Telemetry exporters only initialize when enabled and endpoints are configured.
+
+### Configuration Examples
+
+#### YAML Configuration File
+```yaml
+log:
+  level: debug
+  format: json
+  output_to_file: app.log
+  output_to_stdout: true
+  redacted_keys:
+    - password
+    - token
+    - api_key
+
+telemetry:
+  enabled: true
+  traces:
+    endpoint: localhost:4317
+  metrics:
+    endpoint: localhost:4317
+```
+
+#### Environment Variables
+```bash
+# Logging configuration
+export APP_LOG_FORMAT=json
+export APP_LOG_LEVEL=debug
+export APP_LOG_OUTPUT_TO_FILE=app.log
+export APP_LOG_OUTPUT_TO_STDOUT=true
+export APP_LOG_REDACTED_KEYS=password,token,api_key
+
+# Telemetry configuration
+export APP_TELEMETRY_ENABLED=true
+export APP_TELEMETRY_TRACES_ENDPOINT=localhost:4317
+export APP_TELEMETRY_METRICS_ENDPOINT=localhost:4317
+```
+
+#### Programmatic Configuration
+```go
+import (
+    "github.com/eldius/initial-config-go/setup"
+    "github.com/eldius/initial-config-go/configs"
+)
+
+func main() {
+    err := setup.InitSetup(
+        "my-app",
+        setup.WithDefaultValues(map[string]any{
+            configs.LogLevelKey:          configs.LogLevelDEBUG,
+            configs.LogFormatKey:         configs.LogFormatJSON,
+            configs.LogOutputFileKey:     "app.log",
+            configs.LogOutputToStdoutKey: true,
+            configs.LogKeysToRedactKey:   []string{"password", "token"},
+        }),
+        setup.WithEnvPrefix("myapp"), // Use MYAPP_* env vars
+    )
+    if err != nil {
+        panic(err)
+    }
+}
+```
+
+### Helper Constants and Default Maps
+
+The `configs` package provides helper constants and pre-configured default value maps:
+
+```go
+// Use defaults with file logging enabled
+setup.WithDefaultValues(configs.DefaultConfigValuesLogFileMap)
+
+// Use defaults with stdout logging enabled
+setup.WithDefaultValues(configs.DefaultConfigValuesLogStdoutMap)
+
+// Use defaults with both file and stdout logging enabled
+setup.WithDefaultValues(configs.DefaultConfigValuesLogAllMap)
+```
 
 
 ## HTTP client helper

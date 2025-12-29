@@ -12,6 +12,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// PersistentPreRunE returns a Cobra PreRunE function that initializes application setup
+// and telemetry tracing for the command execution.
 func PersistentPreRunE(appName string, opts ...OptionFunc) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		tracing.start = time.Now()
@@ -40,21 +42,26 @@ func PersistentPreRunE(appName string, opts ...OptionFunc) func(cmd *cobra.Comma
 	}
 }
 
-func PersistentPostRunE(cmd *cobra.Command, args []string) error {
-	if tracing.span != nil {
-		tracing.span.End()
+// PersistentPostRunE returns a Cobra PostRunE function that ends telemetry spans,
+// logs command execution details, and waits for the specified duration before returning.
+// The wait time allows telemetry data to be flushed to the backend before the process exits.
+func PersistentPostRunE(waitTime time.Duration) func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		if tracing.span != nil {
+			tracing.span.End()
+		}
+
+		logs.NewLogger(tracing.ctx, logs.KeyValueData{
+			"cmd_name":     cmd.Name(),
+			"cmd_args":     args,
+			"is_recording": tracing.span.IsRecording(),
+			"running_time": time.Since(tracing.start).String(),
+		}).Debug("stopping trace")
+
+		time.Sleep(waitTime)
+
+		return nil
 	}
-
-	logs.NewLogger(tracing.ctx, logs.KeyValueData{
-		"cmd_name":     cmd.Name(),
-		"cmd_args":     args,
-		"is_recording": tracing.span.IsRecording(),
-		"running_time": time.Since(tracing.start).String(),
-	}).Debug("stopping trace")
-
-	time.Sleep(10 * time.Second)
-
-	return nil
 }
 
 var (

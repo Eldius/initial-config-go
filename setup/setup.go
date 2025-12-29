@@ -18,14 +18,18 @@ import (
 )
 
 var (
+	// ErrEmptyAppName is returned when an empty application name is provided to InitSetup.
 	ErrEmptyAppName = errors.New("appName is empty")
 )
 
+// Prop represents a configuration property with a key-value pair.
 type Prop struct {
 	Key   string
 	Value any
 }
 
+// Options holds configuration options for application setup including
+// default values, config file locations, environment prefix, and telemetry settings.
 type Options struct {
 	DefaultValues           map[string]any
 	CfgFilePathToBeUsed     string
@@ -35,6 +39,7 @@ type Options struct {
 	DefaultCfgFileLocations []string
 }
 
+// GetDefaultValues returns the default configuration values with required logging defaults.
 func (o *Options) GetDefaultValues() map[string]any {
 	if o.DefaultValues == nil {
 		o.DefaultValues = make(map[string]any)
@@ -79,6 +84,7 @@ func (o *Options) GetDefaultCfgFileLocations(appName string) []string {
 	return o.DefaultCfgFileLocations
 }
 
+// GetEnvPrefix returns the environment variable prefix, defaulting to "app" if not set.
 func (o *Options) GetEnvPrefix() string {
 	if o.EnvPrefix == "" {
 		return "app"

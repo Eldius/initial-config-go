@@ -28,9 +28,12 @@ import (
 )
 
 var (
-	ErrTracesInitialization           = errors.New("initializing meter")
+	// ErrTracesInitialization is returned when trace provider initialization fails.
+	ErrTracesInitialization = errors.New("initializing meter")
+	// ErrTracesConnectionInitialization is returned when trace gRPC connection fails.
 	ErrTracesConnectionInitialization = errors.New("initializing metrics connection")
-	ErrTracesExporterInitialization   = errors.New("initializing metric exporter")
+	// ErrTracesExporterInitialization is returned when trace exporter setup fails.
+	ErrTracesExporterInitialization = errors.New("initializing metric exporter")
 )
 
 // InitTelemetry initializes telemetry configuration
@@ -139,9 +142,12 @@ func tracerProvider(ctx context.Context, cfg telemetry.OTELConfigs) error {
 }
 
 var (
-	ErrMeterInitialization             = errors.New("initializing meter")
+	// ErrMeterInitialization is returned when meter provider initialization fails.
+	ErrMeterInitialization = errors.New("initializing meter")
+	// ErrMetricsConnectionInitialization is returned when metrics gRPC connection fails.
 	ErrMetricsConnectionInitialization = errors.New("initializing metrics connection")
-	ErrMetricsExporterInitialization   = errors.New("initializing metric exporter")
+	// ErrMetricsExporterInitialization is returned when metrics exporter setup fails.
+	ErrMetricsExporterInitialization = errors.New("initializing metric exporter")
 )
 
 // meterProvider sets up the metrics provider

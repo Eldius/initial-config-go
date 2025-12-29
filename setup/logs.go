@@ -14,6 +14,7 @@ import (
 )
 
 var (
+	// ErrInvalidLogOutputConfig is returned when neither stdout nor file output is configured for logging.
 	ErrInvalidLogOutputConfig = errors.New("invalid log output configuration: should enable stdout or define an output file")
 )
 
