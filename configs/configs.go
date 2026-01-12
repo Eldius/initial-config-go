@@ -66,6 +66,13 @@ func GetMetricsBackendEndpoint() string {
 	})()
 }
 
+// GetLogsBackendEndpoint returns the configured OTLP logs backend endpoint.
+func GetLogsBackendEndpoint() string {
+	return sync.OnceValue(func() string {
+		return viper.GetString(TelemetryLogsBackendEndpointKey)
+	})()
+}
+
 // ConfigOptionFunc is a function type for configuring default options.
 type ConfigOptionFunc func(defaultOptions map[string]any)
 

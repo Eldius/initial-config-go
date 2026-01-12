@@ -17,7 +17,7 @@ import (
 func PersistentPreRunE(appName string, opts ...OptionFunc) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		tracing.start = time.Now()
-		if err := InitSetup(appName, opts...); err != nil {
+		if err := InitSetup(cmd.Context(), appName, opts...); err != nil {
 			return err
 		}
 		ctx := cmd.Context()

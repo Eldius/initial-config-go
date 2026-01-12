@@ -8,8 +8,8 @@ log:
 telemetry:
   enabled: true
   traces:
-#    endpoint: "otlp:4317"
     endpoint: "otlp:4317"
   metrics:
-#    endpoint: "otlp:4317"
+    endpoint: "otlp:4317"
+  logs:
     endpoint: "otlp:4317"

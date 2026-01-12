@@ -1,4 +1,4 @@
-FROM golang:1.24.2-alpine3.21 AS builder
+FROM golang:1.25.5-alpine3.23 AS builder
 RUN addgroup -S nonroot && \
     adduser -S nonroot -G nonroot
 
@@ -18,7 +18,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
       -o /app/otel \
         /app/examples/telemetry/main.go
 
-FROM gcr.io/distroless/static
+FROM gcr.io/distroless/static:nonroot
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /etc/passwd /etc/passwd
 USER nonroot

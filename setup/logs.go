@@ -1,8 +1,11 @@
 package setup
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"github.com/eldius/initial-config-go/telemetry"
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"io"
 	"log/slog"
 	"os"
@@ -11,6 +14,11 @@ import (
 	"strings"
 
 	"github.com/eldius/initial-config-go/configs"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
+	"go.opentelemetry.io/otel/log/global"
+	otellog "go.opentelemetry.io/otel/sdk/log"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
 )
 
 var (
@@ -18,7 +26,18 @@ var (
 	ErrInvalidLogOutputConfig = errors.New("invalid log output configuration: should enable stdout or define an output file")
 )
 
-func setupLogs(appName, format, level, logOutputFile string, stdout bool, keysToRedact ...string) error {
+func initLogs(ctx context.Context, appName string, options Options) error {
+	return setupLogs(ctx, appName, configs.GetLogFormat(), configs.GetLogLevel(), configs.GetLogOutputFile(), configs.GetLogToStdout(), options, configs.GetLogKeysToRedact()...)
+}
+
+func setupLogs(ctx context.Context, appName, format, level, logOutputFile string, stdout bool, options Options, keysToRedact ...string) error {
+
+	cfg := telemetry.NewDefaultCfg()
+
+	for _, o := range options.OpenTelemetryOptions {
+		o(cfg)
+	}
+
 	if !stdout && logOutputFile == "" {
 		return fmt.Errorf("%w: logOutputFile: %s / stdout: %v", ErrInvalidLogOutputConfig, logOutputFile, stdout)
 	}
@@ -27,6 +46,47 @@ func setupLogs(appName, format, level, logOutputFile string, stdout bool, keysTo
 		keysToRedact[i] = strings.ToLower(key)
 	}
 
+	if cfg.Enabled && cfg.Endpoints.Logs != "" {
+		exporter, err := logShipper(ctx, cfg.Endpoints.Logs)
+		if err != nil {
+			return fmt.Errorf("creating log exporter: %w", err)
+		}
+		// 2. Create a Resource to add service metadata to logs
+		res, err := resource.New(ctx,
+			resource.WithAttributes(
+				semconv.ServiceNameKey.String(cfg.Service.Name),
+				semconv.ServiceVersionKey.String(cfg.Service.Version),
+			),
+		)
+		if err != nil {
+			slog.Error("failed to create resource", "error", err)
+			return fmt.Errorf("creating log resource: %w", err)
+		}
+
+		// 3. Create the OTel Logger Provider
+		// Use a BatchProcessor for production use to efficiently send logs in batches.
+		// A simple processor can be used for debugging/testing.
+		processor := otellog.NewBatchProcessor(exporter)
+		loggerProvider := otellog.NewLoggerProvider(
+			otellog.WithResource(res),
+			otellog.WithProcessor(otellog.NewBatchProcessor(exporter)),
+			otellog.WithProcessor(processor),
+		)
+		//defer func() {
+		//	// Ensure the logger provider is shut down before exiting the application
+		//	if err := loggerProvider.Shutdown(ctx); err != nil {
+		//		slog.Error("failed to shutdown logger provider", "error", err)
+		//	}
+		//}()
+
+		global.SetLoggerProvider(loggerProvider)
+
+		// Set the default slog logger to use the OTel bridge handler
+		slog.SetDefault(
+			otelslog.NewLogger(appName, otelslog.WithLoggerProvider(loggerProvider)),
+		)
+		return nil
+	}
 	writer, err := getWriter(logOutputFile, stdout)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalidLogOutputConfig, err)
@@ -148,4 +208,17 @@ func logAttrsReplacerFunc() func(groups []string, a slog.Attr) slog.Attr {
 		}
 		return a
 	}
+}
+
+func logShipper(ctx context.Context, logsEndpoint string) (*otlploggrpc.Exporter, error) {
+	exporter, err := otlploggrpc.New(
+		ctx,
+		otlploggrpc.WithInsecure(),
+		otlploggrpc.WithEndpoint(logsEndpoint),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("creating otlp log exporter: %w", err)
+	}
+
+	return exporter, nil
 }

@@ -9,6 +9,7 @@ type OTELConfigs struct {
 	Endpoints struct {
 		Traces  string
 		Metrics string
+		Logs    string
 	}
 	Enabled bool
 }
@@ -35,6 +36,13 @@ func WithTraceEndpoint(endpoint string) Option {
 func WithMetricEndpoint(endpoint string) Option {
 	return func(cfg *OTELConfigs) {
 		cfg.Endpoints.Metrics = endpoint
+	}
+}
+
+// WithLogsEndpoint sets the endpoint for the logs exporter.
+func WithLogsEndpoint(endpoint string) Option {
+	return func(cfg *OTELConfigs) {
+		cfg.Endpoints.Logs = endpoint
 	}
 }
 

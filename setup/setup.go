@@ -165,7 +165,7 @@ func WithEnvPrefix(prefix string) OptionFunc {
 
 // InitSetup sets up application default configurations
 // for spf13/viper and slog libraries
-func InitSetup(appName string, opts ...OptionFunc) error {
+func InitSetup(ctx context.Context, appName string, opts ...OptionFunc) error {
 	if appName == "" {
 		return fmt.Errorf("invalid app name: %ww", ErrEmptyAppName)
 	}
@@ -213,17 +213,6 @@ func InitSetup(appName string, opts ...OptionFunc) error {
 		log.Printf("Could not find config file using default values: %s", err)
 	}
 
-	if err := setupLogs(
-		appName,
-		configs.GetLogFormat(),
-		configs.GetLogLevel(),
-		configs.GetLogOutputFile(),
-		configs.GetLogToStdout(),
-		configs.GetLogKeysToRedact()...,
-	); err != nil {
-		return fmt.Errorf("setupLogs: %w", err)
-	}
-
 	if len(cfg.OpenTelemetryOptions) == 0 {
 		cfg.OpenTelemetryOptions = []telemetry.Option{
 			telemetry.WithService(appName, "", ""),
@@ -235,7 +224,19 @@ func InitSetup(appName string, opts ...OptionFunc) error {
 		if metricsEndpoint := configs.GetMetricsBackendEndpoint(); metricsEndpoint != "" {
 			cfg.OpenTelemetryOptions = append(cfg.OpenTelemetryOptions, telemetry.WithMetricEndpoint(metricsEndpoint))
 		}
+		if logsEndpoint := configs.GetLogsBackendEndpoint(); logsEndpoint != "" {
+			cfg.OpenTelemetryOptions = append(cfg.OpenTelemetryOptions, telemetry.WithLogsEndpoint(logsEndpoint))
+		}
 	}
+
+	if err := initLogs(
+		ctx,
+		appName,
+		cfg,
+	); err != nil {
+		return fmt.Errorf("setupLogs: %w", err)
+	}
+
 	if err := InitTelemetry(context.Background(), cfg.OpenTelemetryOptions...); err != nil {
 		return err
 	}

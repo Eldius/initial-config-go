@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"math/rand/v2"
+	"time"
+
 	"github.com/eldius/initial-config-go/setup"
 	"github.com/eldius/initial-config-go/telemetry"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
-	"log/slog"
-	"math/rand/v2"
-	"time"
 )
 
 var (
@@ -21,14 +22,16 @@ Programmatically configuring telemetry components.
 */
 func main() {
 	if err := setup.InitSetup(
+		context.Background(),
 		"telemetry-example-app",
 		setup.WithDefaultCfgFileLocations("./examples/telemetry/", "."),
 		setup.WithEnvPrefix("telemetry"),
 		setup.WithDefaultCfgFileName("config"),
 		setup.WithOpenTelemetryOptions(
-			//telemetry.WithTraceEndpoint("otlp:4317"),
-			//telemetry.WithMetricEndpoint("otlp:4317"),
-			//telemetry.WithOtelEnabled(true),
+			telemetry.WithTraceEndpoint("otlp:4317"),
+			telemetry.WithLogsEndpoint("otlp:4317"),
+			telemetry.WithMetricEndpoint("otlp:4317"),
+			telemetry.WithOtelEnabled(true),
 			telemetry.WithService("telemetry-example-app", AppVersion, "dev"),
 		),
 		setup.WithDefaultValues(map[string]any{}),

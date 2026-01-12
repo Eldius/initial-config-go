@@ -5,13 +5,7 @@ services:
     container_name: otlp
     hostname: otlp
     environment:
-#      ENABLE_LOGS_ALL: "true"
-      ENABLE_LOGS_GRAFANA: "false"
-      ENABLE_LOGS_LOKI: "false"
-      ENABLE_LOGS_PROMETHEUS: "false"
-      ENABLE_LOGS_TEMPO: "false"
-      ENABLE_LOGS_PYROSCOPE: "false"
-      ENABLE_LOGS_OTELCOL: "true"
+      ENABLE_LOGS_ALL: "true"
     mem_limit: 1G
     volumes:
       - ./scripts/otel_lgtm_healthcheck.sh:/opt/health-check.sh:ro
@@ -35,9 +29,3 @@ services:
     depends_on:
       otlp:
         condition: service_healthy
-    logging:
-      driver: "fluentd"
-      options:
-        fluentd-address: 192.168.0.166:6543
-        tag: "{{.Name}}"
-        mode: "non-blocking"
