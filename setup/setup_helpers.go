@@ -47,14 +47,16 @@ func PersistentPreRunE(appName string, opts ...OptionFunc) func(cmd *cobra.Comma
 // The wait time allows telemetry data to be flushed to the backend before the process exits.
 func PersistentPostRunE(waitTime time.Duration) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
+		var isTracing bool
 		if tracing.span != nil {
+			isTracing = true
 			tracing.span.End()
 		}
 
 		logs.NewLogger(tracing.ctx, logs.KeyValueData{
 			"cmd_name":     cmd.Name(),
 			"cmd_args":     args,
-			"is_recording": tracing.span.IsRecording(),
+			"is_recording": isTracing,
 			"running_time": time.Since(tracing.start).String(),
 		}).Debug("stopping trace")
 

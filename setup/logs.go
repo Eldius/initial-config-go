@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/eldius/initial-config-go/telemetry"
-	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/eldius/initial-config-go/telemetry"
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 
 	"github.com/eldius/initial-config-go/configs"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
@@ -47,6 +48,7 @@ func setupLogs(ctx context.Context, appName, format, level, logOutputFile string
 	}
 
 	if cfg.Enabled && cfg.Endpoints.Logs != "" {
+		slog.Info("setting up logs with OpenTelemetry")
 		exporter, err := logShipper(ctx, cfg.Endpoints.Logs)
 		if err != nil {
 			return fmt.Errorf("creating log exporter: %w", err)
@@ -83,7 +85,9 @@ func setupLogs(ctx context.Context, appName, format, level, logOutputFile string
 
 		// Set the default slog logger to use the OTel bridge handler
 		slog.SetDefault(
-			otelslog.NewLogger(appName, otelslog.WithLoggerProvider(loggerProvider)),
+			otelslog.NewLogger(appName,
+				otelslog.WithLoggerProvider(loggerProvider),
+			),
 		)
 		return nil
 	}
