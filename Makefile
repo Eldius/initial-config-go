@@ -33,7 +33,7 @@ vulncheck:
 	@echo "############################"
 	@echo ""
 	@echo ""
-	govulncheck ./...
+	go tool govulncheck ./...
 	@echo "----------------------------"
 	@echo ""
 
