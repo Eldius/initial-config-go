@@ -135,6 +135,8 @@ func tracerProvider(ctx context.Context, cfg telemetry.OTELConfigs) error {
 		sdktrace.WithSpanProcessor(bsp),
 	)
 
+	telemetryProviders.tracerProvider = provider
+
 	// set global tracer provider & text propagators
 	otel.SetTracerProvider(provider)
 
@@ -181,6 +183,8 @@ func meterProvider(ctx context.Context, cfg telemetry.OTELConfigs) error {
 	provider := sdkmetric.NewMeterProvider(
 		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter, sdkmetric.WithInterval(10*time.Second))),
 		sdkmetric.WithResource(defaultResources(cfg)))
+
+	telemetryProviders.meterProvider = provider
 
 	// set global meter provider
 	otel.SetMeterProvider(provider)
