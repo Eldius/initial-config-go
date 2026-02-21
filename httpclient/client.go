@@ -1,8 +1,8 @@
 package httpclient
 
 import (
+	"github.com/eldius/initial-config-go/logs"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/url"
 
@@ -21,8 +21,7 @@ type HttpClient interface {
 }
 
 type customClient struct {
-	c   *http.Client
-	log *slog.Logger
+	c *http.Client
 }
 
 // NewHTTPClient creates a new HTTP client with OpenTelemetry instrumentation
@@ -45,19 +44,21 @@ func NewHTTPClient() *http.Client {
 // and structured logging support.
 func NewClient() HttpClient {
 	return &customClient{
-		c:   NewHTTPClient(),
-		log: slog.Default(),
+		c: NewHTTPClient(),
 	}
 }
 
 func (c *customClient) Do(req *http.Request) (*http.Response, error) {
-	log := c.log.With("method", req.Method, "url", req.URL.String())
+	log := logs.NewLogger(req.Context(), logs.KeyValueData{
+		"method": req.Method,
+		"url":    req.URL.String(),
+	})
 	res, err := c.c.Do(req)
 	if err != nil {
-		log.With("error", err).Info("failed to do http request")
+		log.WithError(err).Info("failed to do http request")
 		return res, err
 	}
-	log.With("status", res.StatusCode).Info("http request succeeded")
+	log.WithExtraData("status", res.StatusCode).Info("http request succeeded")
 	return res, err
 }
 
