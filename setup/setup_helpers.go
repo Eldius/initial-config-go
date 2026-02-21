@@ -3,6 +3,7 @@ package setup
 import (
 	"context"
 	"fmt"
+	otellog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/metric"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"time"
@@ -13,13 +14,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-)
-
-var (
-	telemetryProviders struct {
-		meterProvider  *metric.MeterProvider
-		tracerProvider *tracesdk.TracerProvider
-	}
 )
 
 // PersistentPreRunE returns a Cobra PreRunE function that initializes application setup
@@ -84,11 +78,20 @@ func PersistentPostRunE(waitTime time.Duration) func(cmd *cobra.Command, args []
 }
 
 func TelemetryForceFlush(ctx context.Context) error {
-	if err := telemetryProviders.meterProvider.ForceFlush(ctx); err != nil {
-		return fmt.Errorf("failed to force flush metrics: %w", err)
+	if telemetryProviders.meterProvider != nil {
+		if err := telemetryProviders.meterProvider.ForceFlush(ctx); err != nil {
+			return fmt.Errorf("failed to force flush metrics: %w", err)
+		}
 	}
-	if err := telemetryProviders.tracerProvider.ForceFlush(ctx); err != nil {
-		return fmt.Errorf("failed to force flush traces: %w", err)
+	if telemetryProviders.tracerProvider != nil {
+		if err := telemetryProviders.tracerProvider.ForceFlush(ctx); err != nil {
+			return fmt.Errorf("failed to force flush traces: %w", err)
+		}
+	}
+	if telemetryProviders.loggerProvider != nil {
+		if err := telemetryProviders.loggerProvider.ForceFlush(ctx); err != nil {
+			return fmt.Errorf("failed to force flush logs: %w", err)
+		}
 	}
 	return nil
 }
@@ -99,5 +102,11 @@ var (
 		span   trace.Span
 		cancel context.CancelFunc
 		start  time.Time
+	}
+
+	telemetryProviders struct {
+		meterProvider  *metric.MeterProvider
+		tracerProvider *tracesdk.TracerProvider
+		loggerProvider *otellog.LoggerProvider
 	}
 )

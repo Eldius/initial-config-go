@@ -227,6 +227,9 @@ func InitSetup(ctx context.Context, appName string, opts ...OptionFunc) error {
 		if logsEndpoint := configs.GetLogsBackendEndpoint(); logsEndpoint != "" {
 			cfg.OpenTelemetryOptions = append(cfg.OpenTelemetryOptions, telemetry.WithLogsEndpoint(logsEndpoint))
 		}
+		if configs.GetTelemetryEnabled() {
+			cfg.OpenTelemetryOptions = append(cfg.OpenTelemetryOptions, telemetry.WithOtelEnabled(true))
+		}
 	}
 
 	if err := initLogs(

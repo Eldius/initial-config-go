@@ -83,6 +83,8 @@ func setupLogs(ctx context.Context, appName, format, level, logOutputFile string
 
 		global.SetLoggerProvider(loggerProvider)
 
+		telemetryProviders.loggerProvider = loggerProvider
+
 		// Set the default slog logger to use the OTel bridge handler
 		slog.SetDefault(
 			otelslog.NewLogger(appName,
