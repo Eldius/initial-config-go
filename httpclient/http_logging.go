@@ -24,7 +24,7 @@ func (lrt *loggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		"headers":      req.Header,
 		"request_body": extractRequestBody(req),
 	}
-	log.With("request", logData).Debug("HTTPRequestStarting")
+	log.With("request", logData).DebugContext(req.Context(), "HTTPRequestStarting")
 
 	start := time.Now()
 
@@ -36,11 +36,11 @@ func (lrt *loggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 	}
 
 	if err != nil {
-		log.With("error", err, "request", logData).Error("HTTPRequestFailed")
+		log.With("error", err, "request", logData).ErrorContext(req.Context(), "HTTPRequestFailed")
 		return nil, err
 	}
 
-	log.With("request", logData).Debug("HTTPRequestFinished")
+	log.With("request", logData).DebugContext(req.Context(), "HTTPRequestFinished")
 
 	return resp, nil
 }
