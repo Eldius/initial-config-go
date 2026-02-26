@@ -2,6 +2,8 @@ package client
 
 import (
 	"bytes"
+	"github.com/eldius/initial-config-go/http/logging"
+	"github.com/eldius/initial-config-go/logs"
 	"io"
 	"log/slog"
 	"net/http"
@@ -17,45 +19,39 @@ type loggingRoundTripper struct {
 // RoundTrip is the core of the interceptor. It's called for each HTTP request.
 // It logs request and response details and measures the request duration.
 func (lrt *loggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	log := slog.With("pkg", "http_logging")
-	logData := map[string]any{
-		"url":          req.URL.String(),
-		"method":       req.Method,
-		"headers":      req.Header,
-		"request_body": extractRequestBody(req),
+	log := logs.NewLogger(req.Context(), logs.KeyValueData{
+		"pkg": "http_client_logging",
+	})
+	logData := logging.HTTPRequestLogRecord{
+		URL:    req.URL.String(),
+		Method: req.Method,
+		Request: logging.HTTPRequestData{
+			Headers: req.Header,
+			Body:    logging.ExtractRequestBody(req),
+		},
 	}
-	log.With("request", logData).DebugContext(req.Context(), "HTTPRequestStarting")
+	log.WithExtraData("request", logData).Debug("HTTPRemoteRequestStarting")
 
 	start := time.Now()
 
 	resp, err := lrt.proxied.RoundTrip(req)
 
-	logData["duration"] = time.Since(start)
-	if resp != nil {
-		logData["response_body"] = extractResponseBody(resp)
-	}
-
 	if err != nil {
-		log.With("error", err, "request", logData).ErrorContext(req.Context(), "HTTPRequestFailed")
+		log.WithExtraData("error", err).WithExtraData("request", logData).Error("HTTPRequestFailed")
 		return nil, err
 	}
+	logData.Duration = time.Since(start)
+	if resp != nil {
+		logData.Response = logging.HTTPResponseData{
+			Headers:    resp.Header,
+			Body:       extractResponseBody(resp),
+			StatusCode: resp.StatusCode,
+		}
+	}
 
-	log.With("request", logData).DebugContext(req.Context(), "HTTPRequestFinished")
+	log.WithExtraData("request", logData).Debug("HTTPRemoteRequestFinished")
 
 	return resp, nil
-}
-
-func extractRequestBody(req *http.Request) string {
-	if req.Body == nil {
-		return ""
-	}
-	reader := req.Body
-	defer func() {
-		_ = reader.Close()
-	}()
-	body, _ := io.ReadAll(reader)
-	req.Body = io.NopCloser(bytes.NewBuffer(body))
-	return string(body)
 }
 
 func extractResponseBody(res *http.Response) string {
@@ -75,7 +71,7 @@ func extractResponseBody(res *http.Response) string {
 	return string(body)
 }
 
-// newLoggingClient creates an *http.Client with the logging interceptor.
+// newLoggingClient creates a new *http.Client with the logging interceptor.
 func newLoggingClient(rt http.RoundTripper) *http.Client {
 	// If http.DefaultTransport is used, it may be shared among different clients,
 	// which can be fine. However, creating a new transport provides isolation.
