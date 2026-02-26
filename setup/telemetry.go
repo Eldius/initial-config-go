@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/eldius/initial-config-go/http/client"
 	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/eldius/initial-config-go/configs"
-	"github.com/eldius/initial-config-go/httpclient"
 	"github.com/eldius/initial-config-go/telemetry"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
@@ -73,7 +73,7 @@ func InitTelemetry(ctx context.Context, telemetryOpts ...telemetry.Option) error
 		return err
 	}
 
-	http.DefaultClient = httpclient.NewHTTPClient()
+	http.DefaultClient = client.NewHTTPClient()
 
 	// Start the runtime instrumentation
 	if err := runtime.Start(

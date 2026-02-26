@@ -1,4 +1,4 @@
-package httpclient
+package client
 
 import (
 	"github.com/eldius/initial-config-go/logs"
