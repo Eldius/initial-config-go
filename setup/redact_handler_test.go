@@ -162,6 +162,20 @@ func TestRedactValues_Handler(t *testing.T) {
 	})
 }
 
+func TestRedact_Handle_Attributes(t *testing.T) {
+	var buf bytes.Buffer
+	handler := newRedactHandler(slog.NewJSONHandler(&buf, nil), []string{"password"})
+	logger := slog.New(handler)
+
+	logger.Info("login attempt", "user", "admin", "password", "secret123")
+
+	var m map[string]any
+	err := json.Unmarshal(buf.Bytes(), &m)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "***", m["password"], "Password should be redacted in Handle")
+}
+
 func getLogEntryAttrValue(t *testing.T, m map[string]any, keys ...string) any {
 	t.Helper()
 
