@@ -132,7 +132,13 @@ func TestRedactValues_Handler(t *testing.T) {
 			err := json.Unmarshal(line, &logEntryMap)
 			assert.NoError(t, err)
 
-			assert.Equal(t, "***", getLogEntryAttrValue(t, logEntryMap, "request", "headers", "Authentication"))
+			redactedValue := getLogEntryAttrValue(t, logEntryMap, "request", "headers", "Authentication")
+			assert.IsType(t, []interface{}{"***"}, redactedValue)
+
+			b, err := json.Marshal(redactedValue)
+			assert.NoError(t, err)
+
+			assert.Equal(t, `["***"]`, string(b))
 		}
 	})
 
