@@ -132,7 +132,16 @@ func (r *redactHandler) redactMap(v reflect.Value) any {
 		kStr := key.String()
 		val := v.MapIndex(key)
 		if r.shouldRedact(kStr) {
-			newMap.SetMapIndex(key, reflect.ValueOf("***"))
+			switch reflect.TypeOf(val).Kind() {
+			case reflect.Map:
+				r.redactMap(val)
+			case reflect.Slice, reflect.Array:
+				r.redactSlice(val)
+			case reflect.String:
+				newMap.SetMapIndex(key, reflect.ValueOf("***"))
+			default:
+				newMap.SetMapIndex(key, reflect.ValueOf([]string{"***"}))
+			}
 		} else {
 			redactedVal := r.redactValue(val.Interface())
 			newMap.SetMapIndex(key, reflect.ValueOf(redactedVal))
