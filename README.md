@@ -70,6 +70,9 @@ setup.InitSetup(ctx, "my-app",
     setup.WithDefaultValues(map[string]any{
         "server.port": 8080,
     }),
+    setup.WithProps(
+        setup.Prop{Key: "custom.key", Value: "custom-value"},
+    ),
 )
 ```
 
@@ -162,7 +165,19 @@ Features:
 - `make vulncheck`: Run `govulncheck`.
 - `make validate`: Run all the above.
 - `make benchmark`: Run benchmarks.
-- `make telemetry-example`: Run a full OTEL stack with a sample app using Docker Compose.
+- `make telemetry-example`: Run a full OTEL stack (Grafana LGTM) with a sample app using Docker Compose.
+
+### Local Telemetry Stack
+To try the telemetry integration locally:
+```bash
+make telemetry-example
+```
+This will start:
+- **Grafana**: `http://localhost:3000` (Login: `admin`/`admin`)
+- **Prometheus**: `http://localhost:9090`
+- **Loki**: `http://localhost:3100`
+- **Tempo**: `http://localhost:3200`
+- **Sample App**: Automatically sending traces, metrics, and logs.
 
 ## License
 Licensed under [GPL-3.0](LICENSE).

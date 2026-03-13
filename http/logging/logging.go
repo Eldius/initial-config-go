@@ -21,11 +21,12 @@ func ExtractRequestBody(req *http.Request) string {
 }
 
 type HTTPRequestLogRecord struct {
-	URL      string           `json:"url,omitempty"`
-	Method   string           `json:"method,omitempty"`
 	Request  HTTPRequestData  `json:"request,omitempty"`
 	Response HTTPResponseData `json:"response,omitempty"`
 	Duration time.Duration    `json:"duration,omitempty"`
+	Pattern  string           `json:"pattern,omitempty"`
+	URL      string           `json:"url,omitempty"`
+	Method   string           `json:"method,omitempty"`
 }
 
 type HTTPRequestData struct {

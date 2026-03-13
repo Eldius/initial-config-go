@@ -1,0 +1,9 @@
+---
+log:
+  level: debug
+  format: json
+  output_to_stdout: true
+  redacted_keys:
+    - password
+    - api_key
+    - secret

@@ -1,0 +1,5 @@
+---
+log:
+  level: debug
+  format: text
+  output_to_stdout: true

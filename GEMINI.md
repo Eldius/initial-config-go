@@ -11,11 +11,23 @@
 
 ## Key Components
 
-- **`setup`**: The core package that orchestrates the initialization of configuration, logging, and telemetry.
-- **`configs`**: Defines configuration keys and default values.
-- **`logs`**: A wrapper around `slog` that provides a context-aware `Logger` interface with automatic trace/span ID inclusion.
-- **`telemetry`**: Helpers for setting up OpenTelemetry tracer and meter providers.
-- **`http/client`**: An instrumented HTTP client that supports trace propagation and request/response logging.
+- **`setup`**: The core package that orchestrates the initialization of configuration, logging, and telemetry. Use `InitSetup(ctx, appName, opts...)` to initialize.
+- **`configs`**: Defines configuration keys and default values in `constants.go`.
+- **`logs`**: A wrapper around `slog` that provides a context-aware `Logger` interface with automatic trace/span ID inclusion. Use `logs.NewLogger(ctx)` to create loggers.
+- **`telemetry`**: Helpers for setting up OpenTelemetry tracer, meter, and log providers.
+- **`http/client`**: An instrumented HTTP client (`NewClient()`) that supports trace propagation and request/response logging.
+
+## Initialization & Customization
+
+The library is initialized via `setup.InitSetup`. Customization is achieved through `OptionFunc`s:
+
+- `WithDefaultValues(map[string]any)`: Set default configuration values.
+- `WithProps(...Prop)`: Set specific properties.
+- `WithEnvPrefix(string)`: Set prefix for environment variables (defaults to `APP_`).
+- `WithDefaultCfgFileName(string)`: Set the name of the config file (defaults to `config`).
+- `WithDefaultCfgFileLocations(...string)`: Set search paths for the config file.
+- `WithConfigFileToBeUsed(string)`: Force a specific config file.
+- `WithOpenTelemetryOptions(...telemetry.Option)`: Pass options to the telemetry setup.
 
 ## Building and Running
 
@@ -38,7 +50,7 @@ Common development tasks are managed via the `Makefile`:
 ### Testing
 - Tests are located alongside the source code or in specific `_test.go` files (e.g., in the `setup/` directory).
 - Use `make test` to verify changes.
-- Benchmarks should be maintained for performance-critical parts like the `redact_handler`.
+- Benchmarks are maintained for performance-critical parts like the `redact_handler`.
 
 ### Telemetry
 - Always use `InitSetup` to ensure telemetry is correctly initialized.
@@ -49,3 +61,12 @@ Common development tasks are managed via the `Makefile`:
 - New configuration keys should be added to `configs/constants.go`.
 - Default values should be added to `configs/constants.go` and `setup/setup.go` if they are core defaults.
 - Environment variables use the `APP_` prefix by default (configurable).
+- Config files are expected in YAML format.
+
+## Troubleshooting Telemetry
+
+If telemetry is not working:
+1. Ensure `telemetry.enabled` is `true`.
+2. Check that `telemetry.traces.endpoint` and `telemetry.metrics.endpoint` are correctly set.
+3. Use the `telemetry-example` to verify the setup against a known-good stack.
+4. Verify that the application name passed to `InitSetup` is not empty.

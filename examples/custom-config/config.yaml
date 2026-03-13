@@ -1,0 +1,13 @@
+---
+app:
+  feature:
+    enabled: false
+  timeout: 60
+  api:
+    url: "https://api.dev.example.com"
+custom:
+  key: "value-from-config-file"
+log:
+  level: debug
+  format: text
+  output_to_stdout: true
