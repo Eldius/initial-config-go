@@ -1,5 +1,8 @@
 # initial-config-go
 
+![CI/CD](https://github.com/eldius/initial-config-go/actions/workflows/ci.yml/badge.svg)
+
+
 `initial-config-go` is a reusable Go library designed to simplify application bootstrapping by providing a unified way to handle configuration, structured logging, and OpenTelemetry instrumentation.
 
 ## Features
