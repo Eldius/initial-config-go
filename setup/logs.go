@@ -85,12 +85,16 @@ func setupLogs(ctx context.Context, appName, format, level, logOutputFile string
 
 		telemetryProviders.loggerProvider = loggerProvider
 
-		// Set the default slog logger to use the OTel bridge handler
-		slog.SetDefault(
-			otelslog.NewLogger(appName,
+		handler := newRedactHandler(
+			otelslog.NewHandler(
+				appName,
 				otelslog.WithLoggerProvider(loggerProvider),
+				//otelslog.WithSchemaURL(fmt.Sprintf("%s/schema/v1.log.json", semconv.SchemaURL)),
 			),
+			keysToRedact,
 		)
+		// Set the default slog logger to use the OTel bridge handler
+		slog.SetDefault(slog.New(handler))
 		return nil
 	}
 	writer, err := getWriter(logOutputFile, stdout)
