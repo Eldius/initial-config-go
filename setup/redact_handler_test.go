@@ -49,7 +49,7 @@ func TestRedactValues_Handler(t *testing.T) {
 			},
 		).Info("redacted message 2")
 
-		for _, line := range bytes.Split(buff.Bytes(), []byte{'\n'}) {
+		for line := range bytes.SplitSeq(buff.Bytes(), []byte{'\n'}) {
 			if len(line) == 0 {
 				continue
 			}
@@ -72,7 +72,7 @@ func TestRedactValues_Handler(t *testing.T) {
 		handler, buf := newTestRedactHandler(t, nil)
 		results := func() []map[string]any {
 			var ms []map[string]any
-			for _, line := range bytes.Split(buf.Bytes(), []byte{'\n'}) {
+			for line := range bytes.SplitSeq(buf.Bytes(), []byte{'\n'}) {
 				if len(line) == 0 {
 					continue
 				}
@@ -97,7 +97,7 @@ func TestRedactValues_Handler(t *testing.T) {
 
 		l.With(slog.String("my_key", "not redacted")).Info("firstTest")
 
-		for _, line := range bytes.Split(buf.Bytes(), []byte{'\n'}) {
+		for line := range bytes.SplitSeq(buf.Bytes(), []byte{'\n'}) {
 			if len(line) == 0 {
 				continue
 			}
@@ -123,7 +123,7 @@ func TestRedactValues_Handler(t *testing.T) {
 			},
 		}).Info("firstTest")
 
-		for _, line := range bytes.Split(buf.Bytes(), []byte{'\n'}) {
+		for line := range bytes.SplitSeq(buf.Bytes(), []byte{'\n'}) {
 			if len(line) == 0 {
 				continue
 			}
@@ -133,7 +133,7 @@ func TestRedactValues_Handler(t *testing.T) {
 			assert.NoError(t, err)
 
 			redactedValue := getLogEntryAttrValue(t, logEntryMap, "request", "headers", "Authentication")
-			assert.IsType(t, []interface{}{"***"}, redactedValue)
+			assert.IsType(t, []any{"***"}, redactedValue)
 
 			b, err := json.Marshal(redactedValue)
 			assert.NoError(t, err)
@@ -154,7 +154,7 @@ func TestRedactValues_Handler(t *testing.T) {
 			},
 		}).Info("firstTest")
 
-		for _, line := range bytes.Split(buf.Bytes(), []byte{'\n'}) {
+		for line := range bytes.SplitSeq(buf.Bytes(), []byte{'\n'}) {
 			if len(line) == 0 {
 				continue
 			}

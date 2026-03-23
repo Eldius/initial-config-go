@@ -113,7 +113,7 @@ func (r *redactHandler) redactValue(v any) any {
 		}
 	case reflect.Struct:
 		return r.redactStruct(vVal)
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if vVal.IsNil() {
 			return v
 		}
@@ -132,7 +132,7 @@ func (r *redactHandler) redactMap(v reflect.Value) any {
 		kStr := key.String()
 		val := v.MapIndex(key)
 		if r.shouldRedact(kStr) {
-			switch reflect.TypeOf(val).Kind() {
+			switch reflect.TypeFor[reflect.Value]().Kind() {
 			case reflect.Map:
 				r.redactMap(val)
 			case reflect.Slice, reflect.Array:

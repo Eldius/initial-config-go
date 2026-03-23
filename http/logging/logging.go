@@ -21,8 +21,8 @@ func ExtractRequestBody(req *http.Request) string {
 }
 
 type HTTPRequestLogRecord struct {
-	Request  HTTPRequestData  `json:"request,omitempty"`
-	Response HTTPResponseData `json:"response,omitempty"`
+	Request  HTTPRequestData  `json:"request"`
+	Response HTTPResponseData `json:"response"`
 	Duration time.Duration    `json:"duration,omitempty"`
 	Pattern  string           `json:"pattern,omitempty"`
 	URL      string           `json:"url,omitempty"`

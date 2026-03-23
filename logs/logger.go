@@ -13,17 +13,17 @@ const (
 )
 
 type Logger interface {
-	Debugf(format string, args ...interface{})
-	Infof(format string, args ...interface{})
-	Warnf(format string, args ...interface{})
-	Errorf(format string, args ...interface{})
+	Debugf(format string, args ...any)
+	Infof(format string, args ...any)
+	Warnf(format string, args ...any)
+	Errorf(format string, args ...any)
 	Debug(format string)
 	Info(msg string)
 	Warn(msg string)
 	Error(msg string)
 
 	WithError(err error) Logger
-	WithExtraData(key string, value interface{}) Logger
+	WithExtraData(key string, value any) Logger
 }
 
 type contextDataKey string
@@ -65,16 +65,16 @@ func NewLogger(ctx context.Context, fields ...KeyValueData) Logger {
 	}
 }
 
-func (l *logger) Debugf(format string, args ...interface{}) {
+func (l *logger) Debugf(format string, args ...any) {
 	l.l.DebugContext(l.ctx, fmt.Sprintf(format, args...))
 }
-func (l *logger) Infof(format string, args ...interface{}) {
+func (l *logger) Infof(format string, args ...any) {
 	l.l.InfoContext(l.ctx, fmt.Sprintf(format, args...))
 }
-func (l *logger) Warnf(format string, args ...interface{}) {
+func (l *logger) Warnf(format string, args ...any) {
 	l.l.WarnContext(l.ctx, fmt.Sprintf(format, args...))
 }
-func (l *logger) Errorf(format string, args ...interface{}) {
+func (l *logger) Errorf(format string, args ...any) {
 	l.l.ErrorContext(l.ctx, fmt.Sprintf(format, args...))
 }
 
@@ -97,13 +97,13 @@ func (l *logger) WithError(err error) Logger {
 	}
 }
 
-func (l *logger) WithExtraData(key string, value interface{}) Logger {
+func (l *logger) WithExtraData(key string, value any) Logger {
 	return &logger{
 		l: l.l.With(key, value),
 	}
 }
 
-func (l *logger) WithExtraDataMap(data map[string]interface{}) Logger {
+func (l *logger) WithExtraDataMap(data map[string]any) Logger {
 	log := l.l
 	for k, v := range data {
 		log = log.With(k, v)
