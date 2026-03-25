@@ -7,34 +7,6 @@ import (
 	"time"
 )
 
-var (
-	_ http.ResponseWriter = &loggingResponseWriter{}
-)
-
-type loggingResponseWriter struct {
-	http.ResponseWriter
-	body       []byte
-	statusCode int
-}
-
-func (w *loggingResponseWriter) WriteHeader(code int) {
-	w.statusCode = code
-	w.ResponseWriter.WriteHeader(code)
-}
-
-func (w *loggingResponseWriter) Write(b []byte) (int, error) {
-	w.body = append(w.body, b...)
-	return w.ResponseWriter.Write(b)
-}
-
-func (w *loggingResponseWriter) Response() logging.HTTPResponseData {
-	return logging.HTTPResponseData{
-		Headers:    w.Header(),
-		Body:       string(w.body),
-		StatusCode: w.statusCode,
-	}
-}
-
 // LoggingMiddleware is a middleware that logs HTTP requests and responses.
 // It extracts the request body and logs it. It also logs the request and response details.
 func LoggingMiddleware(next http.Handler) http.Handler {
@@ -55,7 +27,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 
 		log.WithExtraData("request", reqInfo).Info("IncomingHTTPRequestReceived")
 
-		wWrapper := &loggingResponseWriter{ResponseWriter: w}
+		wWrapper := getResponseWriter(w)
 
 		next.ServeHTTP(wWrapper, r)
 
