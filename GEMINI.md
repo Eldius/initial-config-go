@@ -7,15 +7,25 @@
 - **Configuration**: [Viper](https://github.com/spf13/viper)
 - **Logging**: Go standard library [log/slog](https://pkg.go.dev/log/slog)
 - **Telemetry**: [OpenTelemetry Go SDK](https://go.opentelemetry.io/otel)
-- **HTTP Client Instrumentation**: [otelhttp](https://go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp)
+- **HTTP Instrumentation**: [otelhttp](https://go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp)
 
 ## Key Components
 
 - **`setup`**: The core package that orchestrates the initialization of configuration, logging, and telemetry. Use `InitSetup(ctx, appName, opts...)` to initialize.
 - **`configs`**: Defines configuration keys and default values in `constants.go`.
-- **`logs`**: A wrapper around `slog` that provides a context-aware `Logger` interface with automatic trace/span ID inclusion. Use `logs.NewLogger(ctx)` to create loggers.
+- **`logs`**: A wrapper around `slog` that provides a context-aware `Logger` interface with automatic trace/span ID inclusion and sensitive data redaction.
 - **`telemetry`**: Helpers for setting up OpenTelemetry tracer, meter, and log providers.
 - **`http/client`**: An instrumented HTTP client (`NewClient()`) that supports trace propagation and request/response logging.
+- **`http/server`**: Middleware for instrumenting HTTP servers, providing trace propagation, metrics, and detailed request/response logging.
+- **`redact_handler`**: A custom `slog.Handler` that automatically redacts sensitive information based on configurable keys.
+
+## Log Redaction
+
+The library includes a robust log redaction system:
+- **Case-Insensitive Matching**: Redaction keys are matched case-insensitively.
+- **Partial Matching**: Uses `strings.Contains` to match keys (e.g., "pass" will redact "password").
+- **Complex Type Support**: Recursively redacts sensitive keys within maps, structs, slices, and pointers using reflection.
+- **Type-Aware Redaction**: Redacts `string` values to `"***"` and `[]string` (like HTTP headers) to `["***"]` to maintain structure while hiding data.
 
 ## Initialization & Customization
 
@@ -55,12 +65,13 @@ Common development tasks are managed via the `Makefile`:
 ### Telemetry
 - Always use `InitSetup` to ensure telemetry is correctly initialized.
 - Use the `logs.NewLogger(ctx)` to ensure logs are linked to active spans.
-- Use the instrumented HTTP client for external service calls to maintain trace continuity.
+- Use the instrumented HTTP client/server for external service calls and entry points to maintain trace continuity.
 
 ### Configuration
 - New configuration keys should be added to `configs/constants.go`.
 - Default values should be added to `configs/constants.go` and `setup/setup.go` if they are core defaults.
 - Environment variables use the `APP_` prefix by default (configurable).
+- **Redacted Keys**: Configured via `log.redacted_keys`. Supports YAML lists or comma-separated strings in environment variables (e.g., `APP_LOG_REDACTED_KEYS=password,token,authorization`).
 - Config files are expected in YAML format.
 
 ## Troubleshooting Telemetry
