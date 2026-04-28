@@ -59,8 +59,6 @@ func NewLogger(ctx context.Context, fields ...KeyValueData) Logger {
 			l = l.With(k, v)
 		}
 	}
-	//trace := telemetry.GetSpanDataFromContext(ctx)
-	//l = l.With(slog.String("trace_id", trace.TraceID), slog.String("span_id", trace.SpanID))
 	return &logger{
 		logger: l,
 		ctx:    ctx,
