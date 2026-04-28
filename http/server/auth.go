@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	NotAuthorizedErr = errors.New("unauthorized")
+	ErrNotAuthorized = errors.New("unauthorized")
 )
 
 // User represents a user.
@@ -26,7 +26,7 @@ type ctxUserKey string
 
 const (
 	userKey                  ctxUserKey = "user"
-	DefaultXApiKeyHeaderName            = "X-Api-Key"
+	DefaultXApiKeyHeaderName string     = "X-Api-Key"
 )
 
 // UserAuthenticationFunc is a function that authenticates a user based on the provided request.
@@ -89,7 +89,7 @@ func NewApiKeyMapFromPlainMap(m map[string]User) (ApiKeyMap, error) {
 	for k, v := range m {
 		key, err := bcrypt.GenerateFromPassword([]byte(k), bcrypt.DefaultCost)
 		if err != nil {
-			return ApiKeyMap{}, fmt.Errorf("%w:failed to generate bcrypt key: %w", NotAuthorizedErr, err)
+			return ApiKeyMap{}, fmt.Errorf("%w:failed to generate bcrypt key: %w", ErrNotAuthorized, err)
 		}
 
 		token := lookupToken(lookupSecret, k)
@@ -131,7 +131,7 @@ func SingleUserApiKeyAuthenticationFunc(apiKey, headerName string, user User) Us
 	headerName = defineHeaderName(headerName)
 	return func(r *http.Request) (User, error) {
 		if apiKey != "" && r.Header.Get(headerName) != apiKey {
-			return nil, NotAuthorizedErr
+			return nil, ErrNotAuthorized
 		}
 		return user, nil
 	}
@@ -144,13 +144,13 @@ func MultipleUserApiKeyAuthenticationFunc(authData ApiKeyMap, headerName string)
 		apiKeyHeaderValue := r.Header.Get(headerName)
 
 		if apiKeyHeaderValue == "" {
-			return nil, NotAuthorizedErr
+			return nil, ErrNotAuthorized
 		}
 
 		if u, ok := authData.get(apiKeyHeaderValue); ok {
 			return u, nil
 		}
-		return nil, NotAuthorizedErr
+		return nil, ErrNotAuthorized
 	}
 }
 
@@ -161,8 +161,8 @@ func AuthenticationMiddleware(authFunc UserAuthenticationFunc) func(http.Handler
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user, err := authFunc(r)
 			if err != nil {
-				if errors.Is(err, NotAuthorizedErr) {
-					http.Error(w, NotAuthorizedErr.Error(), http.StatusUnauthorized)
+				if errors.Is(err, ErrNotAuthorized) {
+					http.Error(w, ErrNotAuthorized.Error(), http.StatusUnauthorized)
 				}
 				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
