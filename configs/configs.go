@@ -3,7 +3,6 @@ package configs
 import (
 	"maps"
 	"strings"
-	"sync"
 
 	"github.com/spf13/viper"
 )
@@ -11,66 +10,57 @@ import (
 // GetLogOutputFile returns the configured log output file path.
 // Returns an empty string if file logging is disabled.
 func GetLogOutputFile() string {
-	return sync.OnceValue(func() string {
-		return viper.GetString(LogOutputFileKey)
-	})()
+	return viper.GetString(LogOutputFileKey)
 }
 
 // GetLogToStdout returns whether logging to stdout is enabled.
 func GetLogToStdout() bool {
-	return sync.OnceValue(func() bool {
-		return viper.GetBool(LogOutputToStdoutKey)
-	})()
+	return viper.GetBool(LogOutputToStdoutKey)
 }
 
 // GetLogLevel returns the configured log level (info, debug, warn, or error).
 func GetLogLevel() string {
-	return sync.OnceValue(func() string {
-		return strings.ToLower(viper.GetString(LogLevelKey))
-	})()
-
+	return strings.ToLower(viper.GetString(LogLevelKey))
 }
 
 // GetLogFormat returns the configured log format (JSON or text).
 func GetLogFormat() string {
-	return sync.OnceValue(func() string {
-		return strings.ToLower(viper.GetString(LogFormatKey))
-	})()
+	return strings.ToLower(viper.GetString(LogFormatKey))
 }
 
 // GetLogKeysToRedact returns the list of log attribute keys that should be redacted.
 func GetLogKeysToRedact() []string {
-	return sync.OnceValue(func() []string {
-		return viper.GetStringSlice(LogKeysToRedactKey)
-	})()
+	val := viper.Get(LogKeysToRedactKey)
+	if val == nil {
+		return []string{}
+	}
+	if s, ok := val.(string); ok {
+		if s == "" {
+			return []string{}
+		}
+		return strings.Split(s, ",")
+	}
+	return viper.GetStringSlice(LogKeysToRedactKey)
 }
 
 // GetTelemetryEnabled returns whether OpenTelemetry is enabled.
 func GetTelemetryEnabled() bool {
-	return sync.OnceValue(func() bool {
-		return viper.GetBool(TelemetryEnabledKey)
-	})()
+	return viper.GetBool(TelemetryEnabledKey)
 }
 
 // GetTraceBackendEndpoint returns the configured OTLP trace backend endpoint.
 func GetTraceBackendEndpoint() string {
-	return sync.OnceValue(func() string {
-		return viper.GetString(TelemetryTracesBackendEndpointKey)
-	})()
+	return viper.GetString(TelemetryTracesBackendEndpointKey)
 }
 
 // GetMetricsBackendEndpoint returns the configured OTLP metrics backend endpoint.
 func GetMetricsBackendEndpoint() string {
-	return sync.OnceValue(func() string {
-		return viper.GetString(TelemetryMetricsBackendEndpointKey)
-	})()
+	return viper.GetString(TelemetryMetricsBackendEndpointKey)
 }
 
 // GetLogsBackendEndpoint returns the configured OTLP logs backend endpoint.
 func GetLogsBackendEndpoint() string {
-	return sync.OnceValue(func() string {
-		return viper.GetString(TelemetryLogsBackendEndpointKey)
-	})()
+	return viper.GetString(TelemetryLogsBackendEndpointKey)
 }
 
 // ConfigOptionFunc is a function type for configuring default options.

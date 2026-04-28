@@ -167,7 +167,7 @@ func WithEnvPrefix(prefix string) OptionFunc {
 // for spf13/viper and slog libraries
 func InitSetup(ctx context.Context, appName string, opts ...OptionFunc) error {
 	if appName == "" {
-		return fmt.Errorf("invalid app name: %ww", ErrEmptyAppName)
+		return fmt.Errorf("invalid app name: %w", ErrEmptyAppName)
 	}
 
 	cfg := Options{}

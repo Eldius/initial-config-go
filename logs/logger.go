@@ -3,13 +3,16 @@ package logs
 import (
 	"context"
 	"fmt"
-	"github.com/eldius/initial-config-go/telemetry"
 	"log/slog"
 	"maps"
 )
 
 const (
 	key contextDataKey = "logger"
+)
+
+var (
+	_ Logger = (*logger)(nil)
 )
 
 type Logger interface {
@@ -29,9 +32,8 @@ type Logger interface {
 type contextDataKey string
 
 type logger struct {
-	Logger
-	ctx context.Context
-	l   *slog.Logger
+	ctx    context.Context
+	logger *slog.Logger
 }
 
 type KeyValueData map[string]any
@@ -57,58 +59,58 @@ func NewLogger(ctx context.Context, fields ...KeyValueData) Logger {
 			l = l.With(k, v)
 		}
 	}
-	trace := telemetry.GetSpanDataFromContext(ctx)
-	l = l.With(slog.String("trace_id", trace.TraceID), slog.String("span_id", trace.SpanID))
+	//trace := telemetry.GetSpanDataFromContext(ctx)
+	//l = l.With(slog.String("trace_id", trace.TraceID), slog.String("span_id", trace.SpanID))
 	return &logger{
-		l:   l,
-		ctx: ctx,
+		logger: l,
+		ctx:    ctx,
 	}
 }
 
 func (l *logger) Debugf(format string, args ...any) {
-	l.l.DebugContext(l.ctx, fmt.Sprintf(format, args...))
+	l.logger.DebugContext(l.ctx, fmt.Sprintf(format, args...))
 }
 func (l *logger) Infof(format string, args ...any) {
-	l.l.InfoContext(l.ctx, fmt.Sprintf(format, args...))
+	l.logger.InfoContext(l.ctx, fmt.Sprintf(format, args...))
 }
 func (l *logger) Warnf(format string, args ...any) {
-	l.l.WarnContext(l.ctx, fmt.Sprintf(format, args...))
+	l.logger.WarnContext(l.ctx, fmt.Sprintf(format, args...))
 }
 func (l *logger) Errorf(format string, args ...any) {
-	l.l.ErrorContext(l.ctx, fmt.Sprintf(format, args...))
+	l.logger.ErrorContext(l.ctx, fmt.Sprintf(format, args...))
 }
 
 func (l *logger) Debug(msg string) {
-	l.l.DebugContext(l.ctx, msg)
+	l.logger.DebugContext(l.ctx, msg)
 }
 func (l *logger) Info(msg string) {
-	l.l.InfoContext(l.ctx, msg)
+	l.logger.InfoContext(l.ctx, msg)
 }
 func (l *logger) Warn(msg string) {
-	l.l.WarnContext(l.ctx, msg)
+	l.logger.WarnContext(l.ctx, msg)
 }
 func (l *logger) Error(msg string) {
-	l.l.ErrorContext(l.ctx, msg)
+	l.logger.ErrorContext(l.ctx, msg)
 }
 
 func (l *logger) WithError(err error) Logger {
 	return &logger{
-		l: l.l.With("error", err),
+		logger: l.logger.With("error", err),
 	}
 }
 
 func (l *logger) WithExtraData(key string, value any) Logger {
 	return &logger{
-		l: l.l.With(key, value),
+		logger: l.logger.With(key, value),
 	}
 }
 
 func (l *logger) WithExtraDataMap(data map[string]any) Logger {
-	log := l.l
+	log := l.logger
 	for k, v := range data {
 		log = log.With(k, v)
 	}
 	return &logger{
-		l: log,
+		logger: log,
 	}
 }

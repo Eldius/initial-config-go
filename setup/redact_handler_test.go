@@ -133,6 +133,31 @@ func TestRedactValues_Handler(t *testing.T) {
 			assert.NoError(t, err)
 
 			redactedValue := getLogEntryAttrValue(t, logEntryMap, "request", "headers", "Authentication")
+			assert.Equal(t, "***", redactedValue)
+		}
+	})
+
+	t.Run("given a record with redacted key in a map[string][]string (headers) it must be changed", func(t *testing.T) {
+		handler, buf := newTestRedactHandler(t, []string{"authentication"})
+		l := slog.New(handler)
+
+		l.With("request", map[string]any{
+			"headers": map[string][]string{
+				"Content-Type":   {"application/json"},
+				"Authentication": {"My Secret Authentication Key"},
+			},
+		}).Info("headerTest")
+
+		for line := range bytes.SplitSeq(buf.Bytes(), []byte{'\n'}) {
+			if len(line) == 0 {
+				continue
+			}
+			var logEntryMap map[string]any
+
+			err := json.Unmarshal(line, &logEntryMap)
+			assert.NoError(t, err)
+
+			redactedValue := getLogEntryAttrValue(t, logEntryMap, "request", "headers", "Authentication")
 			assert.IsType(t, []any{"***"}, redactedValue)
 
 			b, err := json.Marshal(redactedValue)

@@ -132,16 +132,7 @@ func (r *redactHandler) redactMap(v reflect.Value) any {
 		kStr := key.String()
 		val := v.MapIndex(key)
 		if r.shouldRedact(kStr) {
-			switch reflect.TypeFor[reflect.Value]().Kind() {
-			case reflect.Map:
-				r.redactMap(val)
-			case reflect.Slice, reflect.Array:
-				r.redactSlice(val)
-			case reflect.String:
-				newMap.SetMapIndex(key, reflect.ValueOf("***"))
-			default:
-				newMap.SetMapIndex(key, reflect.ValueOf([]string{"***"}))
-			}
+			newMap.SetMapIndex(key, r.zeroValue(val))
 		} else {
 			redactedVal := r.redactValue(val.Interface())
 			newMap.SetMapIndex(key, reflect.ValueOf(redactedVal))
@@ -205,9 +196,22 @@ func (r *redactHandler) redactSlice(v reflect.Value) any {
 
 func (r *redactHandler) zeroValue(val reflect.Value) reflect.Value {
 	vType := val.Type()
-	switch vType.Kind() {
-	case reflect.String:
+
+	// If the value is a string or can be assigned a string, use "***"
+	if reflect.TypeOf("***").AssignableTo(vType) {
 		return reflect.ValueOf("***")
+	}
+
+	switch vType.Kind() {
+	case reflect.Slice:
+		if vType.Elem().Kind() == reflect.String {
+			// Special handling for []string to return ["***"]
+			// instead of a nil slice, which is often preferred for headers.
+			redactedSlice := reflect.MakeSlice(vType, 1, 1)
+			redactedSlice.Index(0).Set(reflect.ValueOf("***"))
+			return redactedSlice
+		}
+		return reflect.Zero(vType)
 	default:
 		return reflect.Zero(vType)
 	}
