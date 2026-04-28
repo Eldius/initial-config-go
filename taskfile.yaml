@@ -1,0 +1,26 @@
+---
+version: '3'
+
+tasks:
+  test:
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - go test ./... -cover
+
+  vulncheck:
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - go tool govulncheck ./...
+
+  lint:
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - golanci-lint run
+
+  validate:
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - task: test
+      - task: vulncheck
+      - task: ling
+
