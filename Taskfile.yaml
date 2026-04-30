@@ -15,7 +15,7 @@ tasks:
   lint:
     dir: '{{.USER_WORKING_DIR}}'
     cmds:
-      - go tool golanci-lint run
+      - go tool golangci-lint run
 
   validate:
     dir: '{{.USER_WORKING_DIR}}'
