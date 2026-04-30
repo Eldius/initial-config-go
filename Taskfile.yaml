@@ -1,25 +1,89 @@
----
 version: '3'
+
+vars:
+  VERSION:
+    sh: git describe --tags --abbrev=0 | awk -F . '{OFS="."; $NF+=1; print}' || echo "v0.0.1"
 
 tasks:
   test:
-    dir: '{{.USER_WORKING_DIR}}'
+    desc: Runs tests with coverage
     cmds:
+      - echo ""
+      - echo "======================"
+      - echo "  Running tests...    "
+      - echo "======================"
+      - echo ""
       - go test ./... -cover
-
-  vulncheck:
-    dir: '{{.USER_WORKING_DIR}}'
-    cmds:
-      - go tool govulncheck ./...
+      - echo "----------------------"
+      - echo ""
 
   lint:
-    dir: '{{.USER_WORKING_DIR}}'
+    desc: Runs static analysis
     cmds:
-      - go tool golangci-lint run
+      - echo ""
+      - echo "========================"
+      - echo "  Static analyses...    "
+      - echo "========================"
+      - echo ""
+      - golangci-lint run
+      - echo "------------------------"
+      - echo ""
+
+  vulncheck:
+    desc: Checks for vulnerabilities
+    cmds:
+      - echo ""
+      - echo "============================"
+      - echo "  Vulnerability check...    "
+      - echo "============================"
+      - echo ""
+      - go tool govulncheck ./...
+      - echo "----------------------------"
+      - echo ""
 
   validate:
-    dir: '{{.USER_WORKING_DIR}}'
+    desc: Runs test, lint, and vulncheck
+    deps: [test, lint, vulncheck]
     cmds:
-      - task: test
-      - task: vulncheck
-      - task: lint
+      - echo ""
+      - echo "============================="
+      - echo "  Validation completed...    "
+      - echo "============================="
+      - echo ""
+      - echo "-----------------------------"
+      - echo ""
+
+  release:
+    desc: Generates a new version tag and pushes to git
+    deps: [test, lint, vulncheck]
+    cmds:
+      - echo ""
+      - echo "=============================="
+      - echo " Generating next version...   "
+      - echo "=============================="
+      - echo ""
+      - echo "Next version {{.VERSION}}"
+      - echo ""
+      - git tag {{.VERSION}}
+      - git push
+      - git push --tags
+      - echo "------------------------------"
+      - echo ""
+
+  benchmark:
+    desc: Runs benchmarks
+    cmds:
+      - go test -bench=. -benchmem -count=20 ./...
+
+  telemetry-example-down:
+    desc: Shuts down the telemetry example stack
+    cmds:
+      - docker compose -f docker-compose-telemetry.yml down
+
+  telemetry-example:
+    desc: Starts the telemetry example stack
+    deps: [telemetry-example-down]
+    env:
+      COMPOSE_BAKE: true
+    cmds:
+      - docker compose -f docker-compose-telemetry.yml up --build
