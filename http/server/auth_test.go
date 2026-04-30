@@ -1,7 +1,9 @@
 package server
 
 import (
+	"github.com/stretchr/testify/assert"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"golang.org/x/crypto/bcrypt"
@@ -104,4 +106,86 @@ func TestMultipleUserApiKeyAuthenticationFunc_InvalidKey(t *testing.T) {
 	if u != nil {
 		t.Fatalf("expected nil user for invalid key, got: %#v", u)
 	}
+}
+
+func TestSingleUserApiKeyAuthenticationFunc(t *testing.T) {
+	t.Run("given an empty header, should return unauthorized", func(t *testing.T) {
+		mw := AuthenticationMiddleware(SingleUserApiKeyAuthenticationFunc("my-key", "x-api-key", testUser{id: "u1"}))(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("inner handler reached"))
+		}))
+		req := httptest.NewRequest("GET", "http://example.com", nil)
+		w := httptest.NewRecorder()
+
+		mw.ServeHTTP(w, req)
+
+		resp := w.Result()
+		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	})
+
+	t.Run("given an auth header with the right api key, should return ok", func(t *testing.T) {
+		mw := AuthenticationMiddleware(SingleUserApiKeyAuthenticationFunc("my-key", "x-api-key", testUser{id: "u1"}))(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("inner handler reached"))
+		}))
+		req := httptest.NewRequest("GET", "http://example.com", nil)
+		req.Header.Set("x-api-key", "my-key")
+		w := httptest.NewRecorder()
+
+		mw.ServeHTTP(w, req)
+
+		resp := w.Result()
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	})
+
+	t.Run("given an auth header with the wrong api key, should return unauthorized", func(t *testing.T) {
+		mw := AuthenticationMiddleware(SingleUserApiKeyAuthenticationFunc("my-key", "x-api-key", testUser{id: "u1"}))(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("inner handler reached"))
+		}))
+		req := httptest.NewRequest("GET", "http://example.com", nil)
+		req.Header.Set("x-api-key", "wrong-key")
+		w := httptest.NewRecorder()
+
+		mw.ServeHTTP(w, req)
+
+		resp := w.Result()
+		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	})
+}
+
+func TestAuthMiddleware(t *testing.T) {
+	t.Run("given a valid user, should return a success", func(t *testing.T) {
+		mw := AuthenticationMiddleware(func(r *http.Request) (User, error) {
+			return testUser{id: "user-1"}, nil
+		})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("inner handler reached"))
+		}))
+
+		req := httptest.NewRequest("GET", "http://example.com", nil)
+		w := httptest.NewRecorder()
+
+		mw.ServeHTTP(w, req)
+
+		resp := w.Result()
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	})
+
+	t.Run("given an invalid user, should return an error", func(t *testing.T) {
+		mw := AuthenticationMiddleware(func(r *http.Request) (User, error) {
+			return nil, nil
+		})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("inner handler reached"))
+		}))
+
+		req := httptest.NewRequest("GET", "http://example.com", nil)
+		w := httptest.NewRecorder()
+
+		mw.ServeHTTP(w, req)
+
+		resp := w.Result()
+		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	})
 }

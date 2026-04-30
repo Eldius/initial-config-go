@@ -167,6 +167,10 @@ func AuthenticationMiddleware(authFunc UserAuthenticationFunc) func(http.Handler
 				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
 			}
+			if user == nil {
+				http.Error(w, ErrNotAuthorized.Error(), http.StatusUnauthorized)
+				return
+			}
 			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), userKey, user)))
 		})
 	}
