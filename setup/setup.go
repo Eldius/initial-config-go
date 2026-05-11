@@ -14,7 +14,6 @@ import (
 	"github.com/eldius/initial-config-go/telemetry"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
-	"golang.org/x/exp/maps"
 )
 
 var (
@@ -132,7 +131,9 @@ func WithDefaultValues(vals map[string]any) OptionFunc {
 			o.DefaultValues = vals
 			return
 		}
-		maps.Copy(o.DefaultValues, vals)
+		for k, v := range vals {
+			o.DefaultValues[k] = v
+		}
 	}
 }
 
