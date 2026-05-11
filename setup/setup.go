@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"maps"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -131,9 +132,7 @@ func WithDefaultValues(vals map[string]any) OptionFunc {
 			o.DefaultValues = vals
 			return
 		}
-		for k, v := range vals {
-			o.DefaultValues[k] = v
-		}
+		maps.Copy(o.DefaultValues, vals)
 	}
 }
 

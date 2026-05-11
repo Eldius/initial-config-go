@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"runtime"
 	"time"
 )
@@ -44,9 +45,7 @@ func addDataToContext(ctx context.Context, data ...KeyValueData) context.Context
 	if values := ctx.Value(key); values != nil {
 		if m, ok := values.(KeyValueData); ok {
 			for _, d := range data {
-				for k, v := range d {
-					m[k] = v
-				}
+				maps.Copy(m, d)
 			}
 			return context.WithValue(ctx, contextDataKey("logger"), m)
 		}

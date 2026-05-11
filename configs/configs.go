@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"maps"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -67,9 +68,7 @@ type ConfigOptionFunc func(defaultOptions map[string]any)
 
 func addAttr(m map[string]any, key string, value any) map[string]any {
 	nm := make(map[string]any)
-	for k, v := range m {
-		nm[k] = v
-	}
+	maps.Copy(nm, m)
 	nm[key] = value
 
 	return nm

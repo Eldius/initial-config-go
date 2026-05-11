@@ -198,7 +198,7 @@ func (r *redactHandler) zeroValue(val reflect.Value) reflect.Value {
 	vType := val.Type()
 
 	// If the value is a string or can be assigned a string, use "***"
-	if reflect.TypeOf("***").AssignableTo(vType) {
+	if reflect.TypeFor[string]().AssignableTo(vType) {
 		return reflect.ValueOf("***")
 	}
 
