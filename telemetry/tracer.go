@@ -8,6 +8,7 @@ import (
 )
 
 var (
+	// ErrTraceExporterInitialization is an error that occurs when the traces exporter fails to start.
 	ErrTraceExporterInitialization = errors.New("failed to start traces exporter")
 )
 
@@ -26,11 +27,13 @@ func NewSpan(ctx context.Context, traceName string, opts ...trace.SpanStartOptio
 	return otel.Tracer("").Start(ctx, traceName, opts...)
 }
 
+// TracingIDs represents the tracing IDs (TraceID and SpanID) associated with a span.
 type TracingIDs struct {
 	TraceID string
 	SpanID  string
 }
 
+// GetSpanDataFromContext extracts tracing IDs (TraceID and SpanID) from the given context and returns them as TracingIDs.
 func GetSpanDataFromContext(ctx context.Context) TracingIDs {
 	traceID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
 	spanID := trace.SpanFromContext(ctx).SpanContext().SpanID().String()
@@ -38,4 +41,10 @@ func GetSpanDataFromContext(ctx context.Context) TracingIDs {
 		TraceID: traceID,
 		SpanID:  spanID,
 	}
+}
+
+// RecordError records an error in the current span associated with the provided context.
+func RecordError(ctx context.Context, err error) {
+	span := trace.SpanFromContext(ctx)
+	span.RecordError(err)
 }
