@@ -8,7 +8,8 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.28.0"
 )
 
-func GetSQLXDB(driver, connStr string) (*sqlx.DB, error) {
+// GetSqlxDB returns a database connection.
+func GetSqlxDB(driver, connStr string) (*sqlx.DB, error) {
 	driverName, err := registerOtelSQL(driver)
 	if err != nil {
 		return nil, fmt.Errorf("failed to register otelsql driver: %w", err)
@@ -21,6 +22,7 @@ func GetSQLXDB(driver, connStr string) (*sqlx.DB, error) {
 	return db, nil
 }
 
+// GetDB returns a database connection.
 func GetDB(driver, connStr string) (*sql.DB, error) {
 	driverName, err := registerOtelSQL(driver)
 	if err != nil {
