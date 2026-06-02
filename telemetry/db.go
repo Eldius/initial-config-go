@@ -9,12 +9,7 @@ import (
 )
 
 func GetSQLXDB(driver, connStr string) (*sqlx.DB, error) {
-	driverName, err := otelsql.Register(driver,
-		otelsql.WithAttributes(semconv.DBSystemSqlite),
-		otelsql.WithSpanOptions(otelsql.SpanOptions{
-			DisableErrSkip: true,
-		}),
-	)
+	driverName, err := registerOtelSQL(driver)
 	if err != nil {
 		return nil, fmt.Errorf("failed to register otelsql driver: %w", err)
 	}
@@ -27,12 +22,7 @@ func GetSQLXDB(driver, connStr string) (*sqlx.DB, error) {
 }
 
 func GetDB(driver, connStr string) (*sql.DB, error) {
-	driverName, err := otelsql.Register(driver,
-		otelsql.WithAttributes(semconv.DBSystemSqlite),
-		otelsql.WithSpanOptions(otelsql.SpanOptions{
-			DisableErrSkip: true,
-		}),
-	)
+	driverName, err := registerOtelSQL(driver)
 	if err != nil {
 		return nil, fmt.Errorf("failed to register otelsql driver: %w", err)
 	}
@@ -42,4 +32,13 @@ func GetDB(driver, connStr string) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 	return db, nil
+}
+
+func registerOtelSQL(driver string) (string, error) {
+	return otelsql.Register(driver,
+		otelsql.WithAttributes(semconv.DBSystemSqlite),
+		otelsql.WithSpanOptions(otelsql.SpanOptions{
+			DisableErrSkip: true,
+		}),
+	)
 }

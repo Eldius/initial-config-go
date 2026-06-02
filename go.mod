@@ -10,7 +10,9 @@ tool (
 )
 
 require (
+	github.com/XSAM/otelsql v0.40.0
 	github.com/go-logr/logr v1.4.3
+	github.com/jmoiron/sqlx v1.4.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
@@ -29,7 +31,6 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.43.0
 	go.opentelemetry.io/otel/trace v1.43.0
 	golang.org/x/crypto v0.50.0
-	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546
 	google.golang.org/grpc v1.80.0
 )
 
