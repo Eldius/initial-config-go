@@ -12,11 +12,12 @@
 ## Key Components
 
 - **`setup`**: The core package that orchestrates the initialization of configuration, logging, and telemetry. Use `InitSetup(ctx, appName, opts...)` to initialize.
-- **`configs`**: Defines configuration keys and default values in `constants.go`.
+- **`configs`**: Defines configuration keys, default values, and accessor functions in `constants.go` and `configs.go`.
 - **`logs`**: A wrapper around `slog` that provides a context-aware `Logger` interface with automatic trace/span ID inclusion and sensitive data redaction.
 - **`telemetry`**: Helpers for setting up OpenTelemetry tracer, meter, and log providers.
 - **`http/client`**: An instrumented HTTP client (`NewClient()`) that supports trace propagation and request/response logging.
-- **`http/server`**: Middleware for instrumenting HTTP servers, providing trace propagation, metrics, and detailed request/response logging.
+- **`http/server`**: Middleware for instrumenting HTTP servers, providing trace propagation, metrics, detailed request/response logging, and API key authentication.
+- **`http/logging`**: Shared HTTP request/response data types used by both client and server logging.
 - **`redact_handler`**: A custom `slog.Handler` that automatically redacts sensitive information based on configurable keys.
 
 ## Log Redaction
@@ -33,7 +34,7 @@ The library is initialized via `setup.InitSetup`. Customization is achieved thro
 
 - `WithDefaultValues(map[string]any)`: Set default configuration values.
 - `WithProps(...Prop)`: Set specific properties.
-- `WithEnvPrefix(string)`: Set prefix for environment variables (defaults to `APP_`).
+- `WithEnvPrefix(string)`: Set prefix for environment variables (defaults to `app`; Viper uppercases it, so `APP_*` env vars are matched).
 - `WithDefaultCfgFileName(string)`: Set the name of the config file (defaults to `config`).
 - `WithDefaultCfgFileLocations(...string)`: Set search paths for the config file.
 - `WithConfigFileToBeUsed(string)`: Force a specific config file.
@@ -70,7 +71,7 @@ Common development tasks are managed via the `Makefile`:
 ### Configuration
 - New configuration keys should be added to `configs/constants.go`.
 - Default values should be added to `configs/constants.go` and `setup/setup.go` if they are core defaults.
-- Environment variables use the `APP_` prefix by default (configurable).
+- Environment variables use the `app` prefix by default (configurable; Viper uppercases prefix, so `APP_*` env vars are matched).
 - **Redacted Keys**: Configured via `log.redacted_keys`. Supports YAML lists or comma-separated strings in environment variables (e.g., `APP_LOG_REDACTED_KEYS=password,token,authorization`).
 - Config files are expected in YAML format.
 
@@ -78,7 +79,7 @@ Common development tasks are managed via the `Makefile`:
 
 If telemetry is not working:
 1. Ensure `telemetry.enabled` is `true`.
-2. Check that `telemetry.traces.endpoint` and `telemetry.metrics.endpoint` are correctly set.
+2. Check that `telemetry.traces.endpoint`, `telemetry.metrics.endpoint`, and `telemetry.logs.endpoint` are correctly set.
 3. Use the `telemetry-example` to verify the setup against a known-good stack.
 4. Verify that the application name passed to `InitSetup` is not empty.
 
@@ -93,6 +94,7 @@ This project defines specific domains that benefit from specialized expertise. W
     - Managing the `setup` package and `InitSetup` logic.
     - Configuring [Viper](https://github.com/spf13/viper) for file, environment, and default sources.
     - Maintaining the library's public API and extension points (`OptionFunc`).
+    - Providing Cobra integration helpers (`PersistentPreRunE`, `PersistentPostRunE`).
 - **Key Files**:
     - `setup/setup.go`
     - `setup/setup_helpers.go`
@@ -112,6 +114,7 @@ This project defines specific domains that benefit from specialized expertise. W
     - `telemetry/tracer.go`
     - `telemetry/meter.go`
     - `setup/telemetry.go`
+    - `setup/logs.go`
     - `docker-compose-telemetry.yml`
 
 ## 3. Log Security Specialist
@@ -128,23 +131,31 @@ This project defines specific domains that benefit from specialized expertise. W
     - `setup/redact_handler_test.go`
 
 ## 4. Networking Expert
-**Focus**: Instrumented HTTP clients, middleware, and trace propagation.
+**Focus**: Instrumented HTTP clients/servers, middleware, and trace propagation.
 
 - **Responsibilities**:
-    - Maintaining the `http/client` package.
+    - Maintaining the `http/client` and `http/server` packages.
     - Implementing `RoundTripper` logic for request/response logging.
+    - Maintaining server-side middleware (logging, auth, telemetry).
     - Ensuring trace context propagation across service boundaries using `otelhttp`.
 - **Key Files**:
     - `http/client/client.go`
     - `http/client/logging.go`
+    - `http/server/logging.go`
+    - `http/server/telemetry.go`
+    - `http/server/auth.go`
+    - `http/server/model.go`
+    - `http/logging/logging.go`
 
 ## Task Delegation Guide
 
 | Task Category | Recommended Agent |
 |---------------|-------------------|
 | Adding a new configuration source | Core Architect |
+| Implementing API key authentication | Networking Expert |
 | Fixing a trace propagation issue | Networking Expert |
 | Implementing a new metrics exporter | Observability Specialist |
 | Adding keys to the redaction list | Log Security Specialist |
 | Troubleshooting Docker Compose stack | Observability Specialist |
 | Benchmarking log redaction performance | Log Security Specialist |
+| Adding Cobra CLI integration | Core Architect |

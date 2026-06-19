@@ -16,6 +16,7 @@
     - Log shipping to OpenTelemetry collectors.
 - **OpenTelemetry**: Integrated support for Traces, Metrics, and Logs.
 - **HTTP Client**: Instrumented HTTP client with automatic trace propagation and request/response logging.
+- **HTTP Server**: Middleware for request/response logging, OpenTelemetry instrumentation, and API key authentication.
 
 ## Installation
 
@@ -83,7 +84,7 @@ setup.InitSetup(ctx, "my-app",
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `log.format` | string | `json` | `json` or `text` |
+| `log.format` | string | `text` | `json` or `text` |
 | `log.level` | string | `info` | `debug`, `info`, `warn`, `error` |
 | `log.output_to_file` | string | `""` | Path to log file (empty to disable) |
 | `log.output_to_stdout` | bool | `false` | Enable/disable stdout logging |
@@ -96,6 +97,9 @@ setup.InitSetup(ctx, "my-app",
 ## Logging
 
 ### Structured Logging with Context
+
+> **Note:** At least one log output must be configured — either stdout (`log.output_to_stdout: true`), a file (`log.output_to_file: /path/to/log.log`), or an OpenTelemetry logs endpoint. Otherwise `InitSetup` will return an error.
+
 Use the `logs` package to create loggers that automatically include trace information:
 
 ```go
@@ -121,12 +125,16 @@ setup.InitSetup(ctx, "my-app",
     }),
 )
 
-// Logs containing "password" or "api_key" will have their values replaced with "[REDACTED]"
+// Logs containing "password" or "api_key" will have their values replaced with "***"
 ```
 
 ## OpenTelemetry
 
-To enable telemetry, provide the endpoints and enable the flag:
+To enable telemetry, provide the endpoints and enable the flag. When telemetry is enabled, the library automatically:
+
+- Sets up **Tracer**, **Meter**, and **Logger** providers.
+- Starts **runtime instrumentation** (memory stats, goroutines, etc.).
+- Configures the default HTTP client for trace propagation.
 
 ```go
 import "github.com/eldius/initial-config-go/telemetry"
@@ -136,6 +144,7 @@ setup.InitSetup(ctx, "my-app",
         telemetry.WithOtelEnabled(true),
         telemetry.WithTraceEndpoint("localhost:4317"),
         telemetry.WithMetricEndpoint("localhost:4317"),
+        telemetry.WithLogsEndpoint("localhost:4317"),
         telemetry.WithService("my-app", "1.0.0", "production"),
     ),
 )
@@ -159,6 +168,56 @@ Features:
 - Automatic Trace Propagation.
 - Request/Response logging.
 - Integration with `slog`.
+
+## HTTP Server Middleware
+
+The library provides middleware for instrumenting HTTP servers:
+
+### Logging & Telemetry Middleware
+
+```go
+import (
+    "net/http"
+    "github.com/eldius/initial-config-go/http/server"
+)
+
+func main() {
+    mux := http.NewServeMux()
+    mux.HandleFunc("GET /api/health", healthHandler)
+
+    // Wrap the mux with telemetry and logging middleware
+    handler := server.TelemetryMiddleware(mux)
+
+    http.ListenAndServe(":8080", handler)
+}
+```
+
+Features:
+- Automatic trace propagation via OpenTelemetry.
+- Detailed request/response logging (method, URL, headers, body, status code, duration).
+- Span naming based on HTTP method and route pattern.
+
+### Authentication Middleware
+
+```go
+import "github.com/eldius/initial-config-go/http/server"
+
+// Single API key authentication
+authFunc := server.SingleUserApiKeyAuthenticationFunc(
+    "my-secret-key", "", user,
+)
+
+// Multi-user API key authentication (bcrypt-hashed keys)
+apiKeyMap, _ := server.NewApiKeyMapFromPlainMap(map[string]server.User{
+    "key-for-user-a": userA,
+    "key-for-user-b": userB,
+})
+authFunc := server.MultipleUserApiKeyAuthenticationFunc(apiKeyMap, "")
+
+// Protect routes with authentication
+protected := server.AuthenticationMiddleware(authFunc)
+mux.Handle("GET /api/protected", protected(http.HandlerFunc(handler)))
+```
 
 ## Development
 
