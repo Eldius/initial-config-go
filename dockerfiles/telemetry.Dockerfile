@@ -1,4 +1,4 @@
-FROM golang:1.25.5-alpine3.23 AS builder
+FROM golang:1.26.4-alpine3.24 AS builder
 RUN addgroup -S nonroot && \
     adduser -S nonroot -G nonroot
 

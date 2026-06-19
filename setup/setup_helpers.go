@@ -2,6 +2,7 @@ package setup
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	otellog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -65,10 +66,13 @@ func PersistentPostRunE(waitTime time.Duration) func(cmd *cobra.Command, args []
 		}).Debug("stopping trace")
 
 		if err := TelemetryForceFlush(tracing.ctx); err != nil {
-			logs.NewLogger(tracing.ctx, logs.KeyValueData{
-				"error": err.Error(),
-			}).Error("failed to force flush telemetry data")
+			logs.NewLogger(tracing.ctx).WithError(err).Error("failed to force flush telemetry data")
 			return fmt.Errorf("force flush telemetry data: %w", err)
+		}
+
+		if err := TelemetryShutdown(tracing.ctx); err != nil {
+			logs.NewLogger(tracing.ctx).WithError(err).Error("failed to shutdown telemetry")
+			return fmt.Errorf("shutdown telemetry: %w", err)
 		}
 
 		time.Sleep(waitTime)
@@ -92,6 +96,35 @@ func TelemetryForceFlush(ctx context.Context) error {
 		if err := telemetryProviders.loggerProvider.ForceFlush(ctx); err != nil {
 			return fmt.Errorf("failed to force flush logs: %w", err)
 		}
+	}
+	return nil
+}
+
+// TelemetryShutdown gracefully shuts down all telemetry providers.
+// It should be called before application exit to ensure all telemetry data
+// is exported. This is called automatically by PersistentPostRunE for Cobra-based apps.
+func TelemetryShutdown(ctx context.Context) error {
+	var errs []error
+	if telemetryProviders.loggerProvider != nil {
+		if err := telemetryProviders.loggerProvider.Shutdown(ctx); err != nil {
+			errs = append(errs, fmt.Errorf("logger provider: %w", err))
+		}
+	}
+	if telemetryProviders.meterProvider != nil {
+		if err := telemetryProviders.meterProvider.Shutdown(ctx); err != nil {
+			errs = append(errs, fmt.Errorf("meter provider: %w", err))
+		}
+	}
+	if telemetryProviders.tracerProvider != nil {
+		if err := telemetryProviders.tracerProvider.Shutdown(ctx); err != nil {
+			errs = append(errs, fmt.Errorf("tracer provider: %w", err))
+		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("telemetry shutdown errors: %w", errors.Join(errs...))
+	}
+	if err := CloseLogFiles(); err != nil {
+		return fmt.Errorf("telemetry shutdown errors: %w", err)
 	}
 	return nil
 }

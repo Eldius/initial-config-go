@@ -52,7 +52,7 @@ func (o *Options) GetDefaultValues() map[string]any {
 		o.DefaultValues[configs.LogFormatKey] = configs.LogFormatText
 	}
 	if _, ok := o.DefaultValues[configs.LogOutputToStdoutKey]; !ok {
-		o.DefaultValues[configs.LogOutputToStdoutKey] = false
+		o.DefaultValues[configs.LogOutputToStdoutKey] = true
 	}
 	return o.DefaultValues
 }

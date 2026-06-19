@@ -25,6 +25,9 @@ import (
 var (
 	// ErrInvalidLogOutputConfig is returned when neither stdout nor file output is configured for logging.
 	ErrInvalidLogOutputConfig = errors.New("invalid log output configuration: should enable stdout or define an output file")
+
+	// logFiles tracks opened log file handles for cleanup on shutdown.
+	logFiles []*os.File
 )
 
 func initLogs(ctx context.Context, appName string, options Options) error {
@@ -53,7 +56,6 @@ func setupLogs(ctx context.Context, appName, format, level, logOutputFile string
 		if err != nil {
 			return fmt.Errorf("creating log exporter: %w", err)
 		}
-		// 2. Create a Resource to add service metadata to logs
 		res, err := resource.New(ctx,
 			resource.WithAttributes(
 				semconv.ServiceNameKey.String(cfg.Service.Name),
@@ -65,21 +67,10 @@ func setupLogs(ctx context.Context, appName, format, level, logOutputFile string
 			return fmt.Errorf("creating log resource: %w", err)
 		}
 
-		// 3. Create the OTel Logger Provider
-		// Use a BatchProcessor for production use to efficiently send logs in batches.
-		// A simple processor can be used for debugging/testing.
-		processor := otellog.NewBatchProcessor(exporter)
 		loggerProvider := otellog.NewLoggerProvider(
 			otellog.WithResource(res),
 			otellog.WithProcessor(otellog.NewBatchProcessor(exporter)),
-			otellog.WithProcessor(processor),
 		)
-		//defer func() {
-		//	// Ensure the logger provider is shut down before exiting the application
-		//	if err := loggerProvider.Shutdown(ctx); err != nil {
-		//		slog.Error("failed to shutdown logger provider", "error", err)
-		//	}
-		//}()
 
 		global.SetLoggerProvider(loggerProvider)
 
@@ -89,7 +80,6 @@ func setupLogs(ctx context.Context, appName, format, level, logOutputFile string
 			otelslog.NewHandler(
 				appName,
 				otelslog.WithLoggerProvider(loggerProvider),
-				//otelslog.WithSchemaURL(fmt.Sprintf("%s/schema/v1.log.json", semconv.SchemaURL)),
 			),
 			keysToRedact,
 		)
@@ -146,6 +136,7 @@ func getWriter(outputFile string, logToStdout bool) (io.Writer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to open output file %s: %w", outputFile, err)
 		}
+		logFiles = append(logFiles, outFile)
 		if w == nil {
 			return outFile, nil
 		}
@@ -154,6 +145,22 @@ func getWriter(outputFile string, logToStdout bool) (io.Writer, error) {
 	}
 
 	return w, nil
+}
+
+// CloseLogFiles closes all log files opened during setup.
+// It is called automatically by TelemetryShutdown.
+func CloseLogFiles() error {
+	var errs []error
+	for _, f := range logFiles {
+		if err := f.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	logFiles = nil
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to close log files: %w", errors.Join(errs...))
+	}
+	return nil
 }
 
 func logHandler(format, level string, w io.Writer, keysToRedact ...string) (slog.Handler, error) {

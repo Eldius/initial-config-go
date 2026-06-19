@@ -29,11 +29,11 @@ import (
 
 var (
 	// ErrTracesInitialization is returned when trace provider initialization fails.
-	ErrTracesInitialization = errors.New("initializing meter")
+	ErrTracesInitialization = errors.New("initializing tracer")
 	// ErrTracesConnectionInitialization is returned when trace gRPC connection fails.
-	ErrTracesConnectionInitialization = errors.New("initializing metrics connection")
+	ErrTracesConnectionInitialization = errors.New("initializing traces connection")
 	// ErrTracesExporterInitialization is returned when trace exporter setup fails.
-	ErrTracesExporterInitialization = errors.New("initializing metric exporter")
+	ErrTracesExporterInitialization = errors.New("initializing trace exporter")
 )
 
 // InitTelemetry initializes telemetry configuration

@@ -15,7 +15,7 @@ type OTELConfigs struct {
 }
 
 func (t *OTELConfigs) IsEnabled() bool {
-	return t.Enabled && t.Endpoints.Traces != "" && t.Endpoints.Metrics != ""
+	return t.Enabled && (t.Endpoints.Traces != "" || t.Endpoints.Metrics != "" || t.Endpoints.Logs != "")
 }
 
 func NewDefaultCfg() *OTELConfigs {
