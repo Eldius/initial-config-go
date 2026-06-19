@@ -1,6 +1,6 @@
 module github.com/eldius/initial-config-go
 
-go 1.26.3
+go 1.26.4
 
 tool (
 	github.com/go-task/task/v3/cmd/task
