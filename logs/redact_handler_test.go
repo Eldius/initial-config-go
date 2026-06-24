@@ -1,4 +1,4 @@
-package setup
+package logs
 
 import (
 	"bytes"
@@ -16,7 +16,7 @@ import (
 func TestRedactValues_Handler(t *testing.T) {
 	t.Run("given log keys using the same casing should redact then", func(t *testing.T) {
 		var buff bytes.Buffer
-		h, err := logHandler(
+		h, err := LogHandler(
 			configs.LogFormatJSON,
 			configs.LogLevelDEBUG,
 			&buff,
@@ -195,7 +195,7 @@ func TestRedactValues_Handler(t *testing.T) {
 
 func TestRedact_Handle_Attributes(t *testing.T) {
 	var buf bytes.Buffer
-	handler := newRedactHandler(slog.NewJSONHandler(&buf, nil), []string{"password"})
+	handler := NewRedactHandler(slog.NewJSONHandler(&buf, nil), []string{"password"})
 	logger := slog.New(handler)
 
 	logger.Info("login attempt", "user", "admin", "password", "secret123")
@@ -225,11 +225,11 @@ func newTestRedactHandler(t *testing.T, redactedKeys []string) (slog.Handler, *b
 	t.Helper()
 
 	var buf bytes.Buffer
-	return newRedactHandler(
+	return NewRedactHandler(
 		slog.NewJSONHandler(
 			&buf,
 			&slog.HandlerOptions{
-				ReplaceAttr: logAttrsReplacerFunc(),
+				ReplaceAttr: LogAttrsReplacerFunc(),
 				Level:       slog.LevelDebug,
 			},
 		),

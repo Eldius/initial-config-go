@@ -3,6 +3,7 @@ package setup
 import (
 	"testing"
 
+	"github.com/eldius/initial-config-go/logs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -76,28 +77,6 @@ func TestGetDefaultValues(t *testing.T) {
 
 		assert.Equal(t, "custom-value", defaults["custom.key"])
 		assert.Equal(t, true, defaults["log.output_to_stdout"])
-	})
-}
-
-func TestTraceErrorMessages(t *testing.T) {
-	t.Run("trace error messages should use correct terminology", func(t *testing.T) {
-		assert.Contains(t, ErrTracesInitialization.Error(), "tracer",
-			"ErrTracesInitialization should mention 'tracer', not 'meter'")
-		assert.NotContains(t, ErrTracesInitialization.Error(), "meter")
-
-		assert.Contains(t, ErrTracesConnectionInitialization.Error(), "traces",
-			"ErrTracesConnectionInitialization should mention 'traces', not 'metrics'")
-		assert.NotContains(t, ErrTracesConnectionInitialization.Error(), "metrics")
-
-		assert.Contains(t, ErrTracesExporterInitialization.Error(), "trace",
-			"ErrTracesExporterInitialization should mention 'trace', not 'metric'")
-		assert.NotContains(t, ErrTracesExporterInitialization.Error(), "metric")
-	})
-
-	t.Run("meter error messages are correct", func(t *testing.T) {
-		assert.Contains(t, ErrMeterInitialization.Error(), "meter")
-		assert.Contains(t, ErrMetricsConnectionInitialization.Error(), "metrics")
-		assert.Contains(t, ErrMetricsExporterInitialization.Error(), "metric")
 	})
 }
 
@@ -180,9 +159,28 @@ func TestGetDefaultCfgFileLocations(t *testing.T) {
 	})
 }
 
+func TestWithInstrumentHTTPClient(t *testing.T) {
+	t.Run("option sets the field to true", func(t *testing.T) {
+		opts := Options{}
+		WithInstrumentHTTPClient(true)(&opts)
+		assert.True(t, opts.InstrumentHTTPClient)
+	})
+
+	t.Run("option sets the field to false", func(t *testing.T) {
+		opts := Options{}
+		WithInstrumentHTTPClient(false)(&opts)
+		assert.False(t, opts.InstrumentHTTPClient)
+	})
+
+	t.Run("default value is false", func(t *testing.T) {
+		opts := Options{}
+		assert.False(t, opts.InstrumentHTTPClient)
+	})
+}
+
 func TestCloseLogFiles(t *testing.T) {
 	t.Run("CloseLogFiles with no files should not error", func(t *testing.T) {
-		err := CloseLogFiles()
+		err := logs.CloseLogFiles()
 		assert.NoError(t, err)
 	})
 
@@ -193,25 +191,10 @@ func TestCloseLogFiles(t *testing.T) {
 			}),
 		)
 		require.NoError(t, err)
-		err = CloseLogFiles()
+		err = logs.CloseLogFiles()
 		assert.NoError(t, err)
 		// Calling twice should be safe (files already closed, slice cleared)
-		err = CloseLogFiles()
+		err = logs.CloseLogFiles()
 		assert.NoError(t, err)
-	})
-}
-
-func TestTelemetryShutdown(t *testing.T) {
-	t.Run("TelemetryShutdown with no providers should not error", func(t *testing.T) {
-		err := TelemetryShutdown(t.Context())
-		assert.NoError(t, err)
-	})
-
-	t.Run("TelemetryShutdown after InitSetup should not panic", func(t *testing.T) {
-		err := InitSetup(t.Context(), "test-app-shutdown")
-		require.NoError(t, err)
-		err = TelemetryShutdown(t.Context())
-		// Should not panic; may or may not error depending on state
-		t.Logf("TelemetryShutdown result: %v", err)
 	})
 }

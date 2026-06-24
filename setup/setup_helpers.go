@@ -2,11 +2,7 @@ package setup
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	otellog "go.opentelemetry.io/otel/sdk/log"
-	"go.opentelemetry.io/otel/sdk/metric"
-	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"time"
 
 	"github.com/eldius/initial-config-go/logs"
@@ -17,25 +13,35 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+type tracingContextKey string
+
+const tracingKey tracingContextKey = "tracing"
+
+type tracingData struct {
+	span  trace.Span
+	start time.Time
+}
+
 // PersistentPreRunE returns a Cobra PreRunE function that initializes application setup
 // and telemetry tracing for the command execution.
 func PersistentPreRunE(appName string, opts ...OptionFunc) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		tracing.start = time.Now()
+		start := time.Now()
 		if err := InitSetup(cmd.Context(), appName, opts...); err != nil {
 			return err
 		}
 		ctx := cmd.Context()
 		if otel.GetTracerProvider() != nil {
-			tracing.ctx, tracing.span = telemetry.NewSpan(ctx, cmd.Name(), trace.WithSpanKind(trace.SpanKindInternal))
-			tracing.span.SetAttributes(
+			spanCtx, span := telemetry.NewSpan(ctx, cmd.Name(), trace.WithSpanKind(trace.SpanKindInternal))
+			span.SetAttributes(
 				attribute.StringSlice("args", args),
 				attribute.StringSlice("aliases", cmd.Aliases),
 				attribute.String("called_as", cmd.CalledAs()),
 			)
+			ctx = spanCtx
+			cmd.SetContext(context.WithValue(ctx, tracingKey, &tracingData{span: span, start: start}))
 		}
-		cmd.SetContext(tracing.ctx)
-		log := logs.NewLogger(tracing.ctx, logs.KeyValueData{
+		log := logs.NewLogger(ctx, logs.KeyValueData{
 			"cmd_name":  cmd.Name(),
 			"cmd_args":  args,
 			"called_as": cmd.CalledAs(),
@@ -53,25 +59,30 @@ func PersistentPreRunE(appName string, opts ...OptionFunc) func(cmd *cobra.Comma
 func PersistentPostRunE(waitTime time.Duration) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		var isTracing bool
-		if tracing.span != nil {
-			isTracing = true
-			tracing.span.End()
+		var runningTime time.Duration
+
+		if data, ok := cmd.Context().Value(tracingKey).(*tracingData); ok && data != nil {
+			if data.span != nil {
+				isTracing = true
+				data.span.End()
+			}
+			runningTime = time.Since(data.start)
 		}
 
-		logs.NewLogger(tracing.ctx, logs.KeyValueData{
+		logs.NewLogger(cmd.Context(), logs.KeyValueData{
 			"cmd_name":     cmd.Name(),
 			"cmd_args":     args,
 			"is_recording": isTracing,
-			"running_time": time.Since(tracing.start).String(),
+			"running_time": runningTime.String(),
 		}).Debug("stopping trace")
 
-		if err := TelemetryForceFlush(tracing.ctx); err != nil {
-			logs.NewLogger(tracing.ctx).WithError(err).Error("failed to force flush telemetry data")
+		if err := telemetry.TelemetryForceFlush(cmd.Context()); err != nil {
+			logs.NewLogger(cmd.Context()).WithError(err).Error("failed to force flush telemetry data")
 			return fmt.Errorf("force flush telemetry data: %w", err)
 		}
 
-		if err := TelemetryShutdown(tracing.ctx); err != nil {
-			logs.NewLogger(tracing.ctx).WithError(err).Error("failed to shutdown telemetry")
+		if err := telemetry.TelemetryShutdown(cmd.Context()); err != nil {
+			logs.NewLogger(cmd.Context()).WithError(err).Error("failed to shutdown telemetry")
 			return fmt.Errorf("shutdown telemetry: %w", err)
 		}
 
@@ -80,66 +91,3 @@ func PersistentPostRunE(waitTime time.Duration) func(cmd *cobra.Command, args []
 		return nil
 	}
 }
-
-func TelemetryForceFlush(ctx context.Context) error {
-	if telemetryProviders.meterProvider != nil {
-		if err := telemetryProviders.meterProvider.ForceFlush(ctx); err != nil {
-			return fmt.Errorf("failed to force flush metrics: %w", err)
-		}
-	}
-	if telemetryProviders.tracerProvider != nil {
-		if err := telemetryProviders.tracerProvider.ForceFlush(ctx); err != nil {
-			return fmt.Errorf("failed to force flush traces: %w", err)
-		}
-	}
-	if telemetryProviders.loggerProvider != nil {
-		if err := telemetryProviders.loggerProvider.ForceFlush(ctx); err != nil {
-			return fmt.Errorf("failed to force flush logs: %w", err)
-		}
-	}
-	return nil
-}
-
-// TelemetryShutdown gracefully shuts down all telemetry providers.
-// It should be called before application exit to ensure all telemetry data
-// is exported. This is called automatically by PersistentPostRunE for Cobra-based apps.
-func TelemetryShutdown(ctx context.Context) error {
-	var errs []error
-	if telemetryProviders.loggerProvider != nil {
-		if err := telemetryProviders.loggerProvider.Shutdown(ctx); err != nil {
-			errs = append(errs, fmt.Errorf("logger provider: %w", err))
-		}
-	}
-	if telemetryProviders.meterProvider != nil {
-		if err := telemetryProviders.meterProvider.Shutdown(ctx); err != nil {
-			errs = append(errs, fmt.Errorf("meter provider: %w", err))
-		}
-	}
-	if telemetryProviders.tracerProvider != nil {
-		if err := telemetryProviders.tracerProvider.Shutdown(ctx); err != nil {
-			errs = append(errs, fmt.Errorf("tracer provider: %w", err))
-		}
-	}
-	if len(errs) > 0 {
-		return fmt.Errorf("telemetry shutdown errors: %w", errors.Join(errs...))
-	}
-	if err := CloseLogFiles(); err != nil {
-		return fmt.Errorf("telemetry shutdown errors: %w", err)
-	}
-	return nil
-}
-
-var (
-	tracing struct {
-		ctx    context.Context
-		span   trace.Span
-		cancel context.CancelFunc
-		start  time.Time
-	}
-
-	telemetryProviders struct {
-		meterProvider  *metric.MeterProvider
-		tracerProvider *tracesdk.TracerProvider
-		loggerProvider *otellog.LoggerProvider
-	}
-)

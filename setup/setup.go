@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"log"
 	"maps"
+	"net/http"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
 
 	"github.com/eldius/initial-config-go/configs"
+	"github.com/eldius/initial-config-go/http/client"
 	"github.com/eldius/initial-config-go/telemetry"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
@@ -37,6 +39,7 @@ type Options struct {
 	EnvPrefix               string
 	OpenTelemetryOptions    []telemetry.Option
 	DefaultCfgFileLocations []string
+	InstrumentHTTPClient    bool
 }
 
 // GetDefaultValues returns the default configuration values with required logging defaults.
@@ -156,6 +159,15 @@ func WithProps(props ...Prop) OptionFunc {
 	}
 }
 
+// WithInstrumentHTTPClient controls whether http.DefaultClient is replaced
+// with an instrumented client that propagates trace context.
+// Default is false.
+func WithInstrumentHTTPClient(enabled bool) OptionFunc {
+	return func(o *Options) {
+		o.InstrumentHTTPClient = enabled
+	}
+}
+
 // WithEnvPrefix defines the environment variable prefix to be used
 func WithEnvPrefix(prefix string) OptionFunc {
 	return func(o *Options) {
@@ -240,9 +252,14 @@ func InitSetup(ctx context.Context, appName string, opts ...OptionFunc) error {
 		return fmt.Errorf("setupLogs: %w", err)
 	}
 
-	if err := InitTelemetry(context.Background(), cfg.OpenTelemetryOptions...); err != nil {
+	if err := telemetry.InitTelemetry(context.Background(), cfg.OpenTelemetryOptions...); err != nil {
 		return err
 	}
+
+	if cfg.InstrumentHTTPClient {
+		http.DefaultClient = client.NewHTTPClient()
+	}
+
 	return nil
 }
 

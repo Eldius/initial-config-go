@@ -1,4 +1,4 @@
-package setup
+package logs
 
 import (
 	"context"
@@ -12,9 +12,7 @@ type redactHandler struct {
 	keysToRedact []string
 }
 
-// newRedactHandler creates a new slog.Handler that redacts sensitive keys.
-// It performs a case-insensitive partial match on keys.
-func newRedactHandler(h slog.Handler, keysToRedact []string) slog.Handler {
+func NewRedactHandler(h slog.Handler, keysToRedact []string) slog.Handler {
 	loweredKeys := make([]string, len(keysToRedact))
 	for i, k := range keysToRedact {
 		loweredKeys[i] = strings.ToLower(k)
@@ -34,7 +32,6 @@ func (r *redactHandler) Handle(ctx context.Context, record slog.Record) error {
 		return r.h.Handle(ctx, record)
 	}
 
-	// Create a new record to avoid modifying the original one's attributes
 	newRecord := slog.NewRecord(record.Time, record.Level, record.Message, record.PC)
 	record.Attrs(func(attr slog.Attr) bool {
 		newRecord.AddAttrs(r.redactAttr(attr))
@@ -82,7 +79,6 @@ func (r *redactHandler) redactAttr(attr slog.Attr) slog.Attr {
 		for i, a := range groupAttrs {
 			newGroupAttrs[i] = r.redactAttr(a)
 		}
-		// Convert []slog.Attr to []any for slog.Group
 		args := make([]any, len(newGroupAttrs))
 		for i, v := range newGroupAttrs {
 			args[i] = v
@@ -117,7 +113,6 @@ func (r *redactHandler) redactValue(v any) any {
 		if vVal.IsNil() {
 			return v
 		}
-		// Handle pointer by redacting the dereferenced value
 		return r.redactValue(vVal.Elem().Interface())
 	case reflect.Slice, reflect.Array:
 		return r.redactSlice(vVal)
@@ -167,12 +162,10 @@ func (r *redactHandler) redactStruct(v reflect.Value) any {
 			newStruct.Field(i).Set(r.zeroValue(fieldVal))
 		} else {
 			redactedVal := r.redactValue(fieldVal.Interface())
-			// Ensure the redacted value is assignable to the field
 			rv := reflect.ValueOf(redactedVal)
 			if rv.Type().AssignableTo(field.Type) {
 				newStruct.Field(i).Set(rv)
 			} else {
-				// Fallback to original value if types don't match after redaction logic
 				newStruct.Field(i).Set(fieldVal)
 			}
 		}
@@ -197,7 +190,6 @@ func (r *redactHandler) redactSlice(v reflect.Value) any {
 func (r *redactHandler) zeroValue(val reflect.Value) reflect.Value {
 	vType := val.Type()
 
-	// If the value is a string or can be assigned a string, use "***"
 	if reflect.TypeFor[string]().AssignableTo(vType) {
 		return reflect.ValueOf("***")
 	}
@@ -205,8 +197,6 @@ func (r *redactHandler) zeroValue(val reflect.Value) reflect.Value {
 	switch vType.Kind() {
 	case reflect.Slice:
 		if vType.Elem().Kind() == reflect.String {
-			// Special handling for []string to return ["***"]
-			// instead of a nil slice, which is often preferred for headers.
 			redactedSlice := reflect.MakeSlice(vType, 1, 1)
 			redactedSlice.Index(0).Set(reflect.ValueOf("***"))
 			return redactedSlice

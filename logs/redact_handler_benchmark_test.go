@@ -1,4 +1,4 @@
-package setup
+package logs
 
 import (
 	"io"
@@ -24,7 +24,7 @@ func BenchmarkRedactHandler(b *testing.B) {
 
 	b.Run("simple string attr values", func(b *testing.B) {
 		b.Run("using simple string attributes and no keys to redact", func(b *testing.B) {
-			l := slog.New(newRedactHandler(slog.NewJSONHandler(io.Discard, nil), nil))
+			l := slog.New(NewRedactHandler(slog.NewJSONHandler(io.Discard, nil), nil))
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				l.With(
@@ -36,7 +36,7 @@ func BenchmarkRedactHandler(b *testing.B) {
 		})
 
 		b.Run("using simple string attributes and 1 key to redact", func(b *testing.B) {
-			l := slog.New(newRedactHandler(slog.NewJSONHandler(io.Discard, nil), []string{"authentication"}))
+			l := slog.New(NewRedactHandler(slog.NewJSONHandler(io.Discard, nil), []string{"authentication"}))
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				l.With(
@@ -47,7 +47,7 @@ func BenchmarkRedactHandler(b *testing.B) {
 			}
 		})
 		b.Run("using simple string attributes and 2 keys to redact", func(b *testing.B) {
-			l := slog.New(newRedactHandler(slog.NewJSONHandler(io.Discard, nil), []string{"authentication", "permission"}))
+			l := slog.New(NewRedactHandler(slog.NewJSONHandler(io.Discard, nil), []string{"authentication", "permission"}))
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				l.With(
@@ -58,7 +58,7 @@ func BenchmarkRedactHandler(b *testing.B) {
 			}
 		})
 		b.Run("using simple string attributes and 3 keys to redact", func(b *testing.B) {
-			l := slog.New(newRedactHandler(slog.NewJSONHandler(io.Discard, nil), []string{"authentication", "permission", "secret_key"}))
+			l := slog.New(NewRedactHandler(slog.NewJSONHandler(io.Discard, nil), []string{"authentication", "permission", "secret_key"}))
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				l.With(

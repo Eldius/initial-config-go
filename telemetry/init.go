@@ -1,18 +1,16 @@
-package setup
+package telemetry
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/eldius/initial-config-go/http/client"
-	"github.com/go-logr/logr"
 	"log/slog"
-	"net/http"
 	"os"
 	"time"
 
 	"github.com/eldius/initial-config-go/configs"
-	"github.com/eldius/initial-config-go/telemetry"
+	"github.com/eldius/initial-config-go/logs"
+	"github.com/go-logr/logr"
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -29,17 +27,16 @@ import (
 )
 
 var (
-	// ErrTracesInitialization is returned when trace provider initialization fails.
-	ErrTracesInitialization = errors.New("initializing tracer")
-	// ErrTracesConnectionInitialization is returned when trace gRPC connection fails.
-	ErrTracesConnectionInitialization = errors.New("initializing traces connection")
-	// ErrTracesExporterInitialization is returned when trace exporter setup fails.
-	ErrTracesExporterInitialization = errors.New("initializing trace exporter")
+	ErrTracesInitialization             = errors.New("initializing tracer")
+	ErrTracesConnectionInitialization   = errors.New("initializing traces connection")
+	ErrTracesExporterInitialization     = errors.New("initializing trace exporter")
+	ErrMeterInitialization              = errors.New("initializing meter")
+	ErrMetricsConnectionInitialization  = errors.New("initializing metrics connection")
+	ErrMetricsExporterInitialization    = errors.New("initializing metric exporter")
 )
 
-// InitTelemetry initializes telemetry configuration
-func InitTelemetry(ctx context.Context, telemetryOpts ...telemetry.Option) error {
-	cfg := telemetry.NewDefaultCfg()
+func InitTelemetry(ctx context.Context, telemetryOpts ...Option) error {
+	cfg := NewDefaultCfg()
 	for _, opt := range telemetryOpts {
 		opt(cfg)
 	}
@@ -82,8 +79,6 @@ func InitTelemetry(ctx context.Context, telemetryOpts ...telemetry.Option) error
 		return err
 	}
 
-	http.DefaultClient = client.NewHTTPClient()
-
 	// Start the runtime instrumentation
 	if err := runtime.Start(
 		runtime.WithMinimumReadMemStatsInterval(5 * time.Second),
@@ -101,13 +96,13 @@ func setupTelemetryDebugLog() error {
 	otelLog := slog.NewJSONHandler(otelLogFile, &slog.HandlerOptions{
 		AddSource:   true,
 		Level:       slog.LevelDebug,
-		ReplaceAttr: logAttrsReplacerFunc(),
+		ReplaceAttr: logs.LogAttrsReplacerFunc(),
 	})
 	otel.SetLogger(logr.FromSlogHandler(otelLog))
 	return nil
 }
 
-func tracerProvider(ctx context.Context, cfg telemetry.OTELConfigs) error {
+func tracerProvider(ctx context.Context, cfg OTELConfigs) error {
 	l := slog.Default()
 	l.Debug(fmt.Sprintf("configuring trace export for '%s'", cfg.Endpoints.Traces))
 
@@ -158,7 +153,7 @@ func tracerProvider(ctx context.Context, cfg telemetry.OTELConfigs) error {
 		sdktrace.WithSpanProcessor(bsp),
 	)
 
-	telemetryProviders.tracerProvider = provider
+	SetTracerProvider(provider)
 
 	// set global tracer provider & text propagators
 	otel.SetTracerProvider(provider)
@@ -166,17 +161,7 @@ func tracerProvider(ctx context.Context, cfg telemetry.OTELConfigs) error {
 	return nil
 }
 
-var (
-	// ErrMeterInitialization is returned when meter provider initialization fails.
-	ErrMeterInitialization = errors.New("initializing meter")
-	// ErrMetricsConnectionInitialization is returned when metrics gRPC connection fails.
-	ErrMetricsConnectionInitialization = errors.New("initializing metrics connection")
-	// ErrMetricsExporterInitialization is returned when metrics exporter setup fails.
-	ErrMetricsExporterInitialization = errors.New("initializing metric exporter")
-)
-
-// meterProvider sets up the metrics provider
-func meterProvider(ctx context.Context, cfg telemetry.OTELConfigs) error {
+func meterProvider(ctx context.Context, cfg OTELConfigs) error {
 	l := slog.Default().With(
 		slog.String("exporter_endpoint", cfg.Endpoints.Metrics),
 	)
@@ -207,7 +192,7 @@ func meterProvider(ctx context.Context, cfg telemetry.OTELConfigs) error {
 		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter, sdkmetric.WithInterval(10*time.Second))),
 		sdkmetric.WithResource(defaultResources(cfg)))
 
-	telemetryProviders.meterProvider = provider
+	SetMeterProvider(provider)
 
 	// set global meter provider
 	otel.SetMeterProvider(provider)
@@ -215,7 +200,7 @@ func meterProvider(ctx context.Context, cfg telemetry.OTELConfigs) error {
 	return nil
 }
 
-func defaultResources(cfg telemetry.OTELConfigs) *resource.Resource {
+func defaultResources(cfg OTELConfigs) *resource.Resource {
 	res := resource.NewWithAttributes(
 		semconv.SchemaURL,
 		semconv.ServiceNameKey.String(cfg.Service.Name),
