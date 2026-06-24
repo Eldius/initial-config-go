@@ -32,10 +32,10 @@ Tools are declared in `go.mod` `tool` directives — use `go tool <name>`.
 
 - **Env prefix**: `WithEnvPrefix("MYAPP")` lowercases to `myapp` internally, but Viper uppercases for env matching → expect `MYAPP_*` env vars (not `myapp_*`).
 - **Config key dots**: `log.format` in code → nested YAML: `log: { format: json }`. Viper's `SetEnvKeyReplacer` replaces `.` with `_` for env vars → `APP_LOG_FORMAT`.
-- **Log output required**: At least one of `log.output_to_stdout`, `log.output_to_file`, or OTEL logs endpoint must be configured, or `InitSetup` returns an error.
+- **Log output required**: At least one of `log.output_to_stdout`, `log.output_to_file`, or OpenTelemetry logs endpoint must be configured, or `InitSetup` returns an error.
 - **Redacted keys**: Accept YAML lists **or** comma-separated env var strings (e.g. `APP_LOG_REDACTED_KEYS=password,token,authorization`). Matching is case-insensitive partial via `strings.Contains`.
-- **Default log output**: `GetDefaultValues()` sets `log.output_to_stdout = true` unless explicitly overridden.
-- **Telemetry**: Not enabled by default. `IsEnabled()` returns true only if `Enabled == true` **and** at least one endpoint is non-empty.
+- **Default log output**: `Options.GetDefaultValues()` sets `log.output_to_stdout = true` unless explicitly overridden.
+- **Telemetry**: Not enabled by default. `OTELConfigs.IsEnabled()` returns true only if `Enabled == true` **and** at least one endpoint is non-empty.
 - **Tests**: Use `t.Context()` (Go 1.26+). External test packages to avoid import cycles (e.g. `telemetry/shutdown_test.go` uses `package telemetry_test`).
 - **CI**: Runs `go mod tidy`, `make test`, `make vulncheck`, and `golangci-lint-action` — does NOT run `make lint`.
 - **otelhttp span naming**: `TelemetryMiddleware` uses custom `SpanNameFormatter` that prefers `r.Pattern` over path.

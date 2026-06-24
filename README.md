@@ -134,7 +134,7 @@ func process(ctx context.Context) {
 ```
 
 ### Redaction
-Sensitive keys can be automatically redacted:
+Sensitive keys can be automatically redacted — configured via config file or programmatically:
 
 ```go
 setup.InitSetup(ctx, "my-app",
@@ -146,13 +146,23 @@ setup.InitSetup(ctx, "my-app",
 // Logs containing "password" or "api_key" will have their values replaced with "***"
 ```
 
+The redaction handler is also available directly in the `logs` package:
+
+```go
+import "github.com/eldius/initial-config-go/logs"
+
+handler := logs.NewRedactHandler(slog.NewJSONHandler(w, nil), []string{"password"})
+logger := slog.New(handler)
+```
+
 ## OpenTelemetry
 
 To enable telemetry, provide the endpoints and enable the flag. When telemetry is enabled, the library automatically:
 
 - Sets up **Tracer**, **Meter**, and **Logger** providers.
 - Starts **runtime instrumentation** (memory stats, goroutines, etc.).
-- Configures the default HTTP client for trace propagation.
+
+### Through InitSetup (recommended)
 
 ```go
 import "github.com/eldius/initial-config-go/telemetry"
@@ -168,9 +178,26 @@ setup.InitSetup(ctx, "my-app",
 )
 ```
 
+### Standalone
+
+The `telemetry` package also exports `InitTelemetry` directly for use outside `InitSetup`:
+
+```go
+import "github.com/eldius/initial-config-go/telemetry"
+
+telemetry.InitTelemetry(ctx,
+    telemetry.WithOtelEnabled(true),
+    telemetry.WithTraceEndpoint("localhost:4317"),
+    telemetry.WithService("my-app", "1.0.0", "production"),
+)
+defer telemetry.TelemetryShutdown(ctx)
+```
+
+> **Note:** The `http.DefaultClient` is NOT automatically instrumented. See [HTTP Client Helper](#http-client-helper) for options.
+
 ## HTTP Client Helper
 
-The library provides an instrumented HTTP client:
+The library provides an instrumented HTTP client with automatic trace propagation and request/response logging:
 
 ```go
 import "github.com/eldius/initial-config-go/http/client"
@@ -180,6 +207,22 @@ func main() {
     resp, err := c.Get("https://api.example.com")
     // ...
 }
+```
+
+The `http.DefaultClient` is NOT automatically instrumented. To replace it, use `WithInstrumentHTTPClient`:
+
+```go
+setup.InitSetup(ctx, "my-app",
+    setup.WithInstrumentHTTPClient(true),
+)
+```
+
+Or use the explicit `NewHTTPClient()` function:
+
+```go
+import "github.com/eldius/initial-config-go/http/client"
+
+http.DefaultClient = client.NewHTTPClient()
 ```
 
 Features:
@@ -274,7 +317,7 @@ func main() {
 - `make lint`: Run `golangci-lint`.
 - `make vulncheck`: Run `govulncheck`.
 - `make validate`: Run all the above.
-- `make benchmark`: Run benchmarks.
+- `make benchmark`: Run benchmarks (log redact handler bench in `logs/`, OTEL setup bench in `setup/`).
 - `make telemetry-example`: Run a full OTEL stack (Grafana LGTM) with a sample app using Docker Compose.
 
 ### Local Telemetry Stack
