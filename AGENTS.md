@@ -1,161 +1,44 @@
-# Project Overview: initial-config-go
+# initial-config-go
 
-`initial-config-go` is a reusable Go library designed to simplify application bootstrapping. It provides a unified interface for configuration management (Viper), structured logging (slog), and OpenTelemetry (OTEL) instrumentation (traces, metrics, and logs).
+Go library for app bootstrapping (Viper config + slog logging + OpenTelemetry).
 
-## Main Technologies
-- **Language**: Go 1.26
-- **Configuration**: [Viper](https://github.com/spf13/viper)
-- **Logging**: Go standard library [log/slog](https://pkg.go.dev/log/slog)
-- **Telemetry**: [OpenTelemetry Go SDK](https://go.opentelemetry.io/otel)
-- **HTTP Instrumentation**: [otelhttp](https://go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp)
+Module: `github.com/eldius/initial-config-go` / Go 1.26.4
 
-## Key Components
+## Commands
 
-- **`setup`**: The core package that orchestrates the initialization of configuration, logging, and telemetry. Use `InitSetup(ctx, appName, opts...)` to initialize.
-- **`configs`**: Defines configuration keys, default values, and accessor functions in `constants.go` and `configs.go`.
-- **`logs`**: A wrapper around `slog` that provides a context-aware `Logger` interface with automatic trace/span ID inclusion and sensitive data redaction.
-- **`telemetry`**: Helpers for setting up OpenTelemetry tracer, meter, and log providers.
-- **`http/client`**: An instrumented HTTP client (`NewClient()`) that supports trace propagation and request/response logging.
-- **`http/server`**: Middleware for instrumenting HTTP servers, providing trace propagation, metrics, detailed request/response logging, and API key authentication.
-- **`http/logging`**: Shared HTTP request/response data types used by both client and server logging.
-- **`redact_handler`**: A custom `slog.Handler` that automatically redacts sensitive information based on configurable keys.
+| Command | What |
+|---|---|
+| `make test` / `task test` | `go test ./... -cover` |
+| `make lint` / `task lint` | `golangci-lint run` |
+| `make vulncheck` / `task vulncheck` | `go tool govulncheck ./...` |
+| `make validate` / `task validate` | test + lint + vulncheck (order matters) |
+| `make benchmark` | `go test -bench=. -benchmem -count=20 ./...` |
+| `make release` | tags next version and pushes |
+| `make telemetry-example` | Docker Compose Grafana LGTM stack |
 
-## Log Redaction
+Tools are declared in `go.mod` `tool` directives — use `go tool <name>`.
 
-The library includes a robust log redaction system:
-- **Case-Insensitive Matching**: Redaction keys are matched case-insensitively.
-- **Partial Matching**: Uses `strings.Contains` to match keys (e.g., "pass" will redact "password").
-- **Complex Type Support**: Recursively redacts sensitive keys within maps, structs, slices, and pointers using reflection.
-- **Type-Aware Redaction**: Redacts `string` values to `"***"` and `[]string` (like HTTP headers) to `["***"]` to maintain structure while hiding data.
+## Key packages
 
-## Initialization & Customization
+- **`setup`** — public entrypoint: `InitSetup(ctx, appName, opts...)`. Cobra helpers: `PersistentPreRunE`, `PersistentPostRunE` in `setup/setup_helpers.go`.
+- **`configs`** — config key constants, accessor funcs via Viper.
+- **`logs`** — `logs.NewLogger(ctx)` returns a `Logger` interface (not `*slog.Logger`) with `WithError`, `WithExtraData`, `Debugf`/`Infof`/etc.
+- **`telemetry`** — OTel setup; also exports `GetSqlxDB`/`GetDB` for instrumented SQL via `otelsql`.
+- **`http/client`** — `NewHTTPClient()` returns `*http.Client`; `NewClient()` returns `HttpClient` interface.
+- **`http/server`** — `TelemetryMiddleware(mux)`, `LoggingMiddleware`, `AuthenticationMiddleware`, `SingleUserApiKeyAuthenticationFunc`, `MultipleUserApiKeyAuthenticationFunc` (bcrypt + lookup token).
+- **`http/logging`** — shared `HTTPRequestLogRecord`, `HTTPRequestData`, `HTTPResponseData` types.
 
-The library is initialized via `setup.InitSetup`. Customization is achieved through `OptionFunc`s:
+## Gotchas
 
-- `WithDefaultValues(map[string]any)`: Set default configuration values.
-- `WithProps(...Prop)`: Set specific properties.
-- `WithEnvPrefix(string)`: Set prefix for environment variables (defaults to `app`; Viper uppercases it, so `APP_*` env vars are matched).
-- `WithDefaultCfgFileName(string)`: Set the name of the config file (defaults to `config`).
-- `WithDefaultCfgFileLocations(...string)`: Set search paths for the config file.
-- `WithConfigFileToBeUsed(string)`: Force a specific config file.
-- `WithOpenTelemetryOptions(...telemetry.Option)`: Pass options to the telemetry setup.
-
-## Building and Running
-
-Common development tasks are managed via the `Makefile`:
-
-- **Test**: `make test` (Runs tests with coverage)
-- **Lint**: `make lint` (Runs `golangci-lint`)
-- **Vulnerability Check**: `make vulncheck` (Runs `govulncheck`)
-- **Validate**: `make validate` (Runs test, lint, and vulncheck)
-- **Benchmark**: `make benchmark` (Runs benchmarks)
-- **Example Stack**: `make telemetry-example` (Starts a Grafana LGTM stack and a sample app using Docker Compose)
-
-## Development Conventions
-
-### Coding Style
-- Follow standard Go idiomatic practices.
-- Use `slog` for all logging.
-- Ensure that `context.Context` is passed through for trace propagation.
-
-### Testing
-- Tests are located alongside the source code or in specific `_test.go` files (e.g., in the `setup/` directory).
-- Use `make test` to verify changes.
-- Benchmarks are maintained for performance-critical parts like the `redact_handler`.
-
-### Telemetry
-- Always use `InitSetup` to ensure telemetry is correctly initialized.
-- Use the `logs.NewLogger(ctx)` to ensure logs are linked to active spans.
-- Use the instrumented HTTP client/server for external service calls and entry points to maintain trace continuity.
-
-### Configuration
-- New configuration keys should be added to `configs/constants.go`.
-- Default values should be added to `configs/constants.go` and `setup/setup.go` if they are core defaults.
-- Environment variables use the `app` prefix by default (configurable; Viper uppercases prefix, so `APP_*` env vars are matched).
-- **Redacted Keys**: Configured via `log.redacted_keys`. Supports YAML lists or comma-separated strings in environment variables (e.g., `APP_LOG_REDACTED_KEYS=password,token,authorization`).
-- Config files are expected in YAML format.
-
-## Troubleshooting Telemetry
-
-If telemetry is not working:
-1. Ensure `telemetry.enabled` is `true`.
-2. Check that `telemetry.traces.endpoint`, `telemetry.metrics.endpoint`, and `telemetry.logs.endpoint` are correctly set.
-3. Use the `telemetry-example` to verify the setup against a known-good stack.
-4. Verify that the application name passed to `InitSetup` is not empty.
-
-# Specialized Agents for initial-config-go
-
-This project defines specific domains that benefit from specialized expertise. When interacting with an AI agent or delegating tasks, consider these specialized roles:
-
-## 1. Core Architect
-**Focus**: System initialization, configuration management, and library orchestration.
-
-- **Responsibilities**:
-    - Managing the `setup` package and `InitSetup` logic.
-    - Configuring [Viper](https://github.com/spf13/viper) for file, environment, and default sources.
-    - Maintaining the library's public API and extension points (`OptionFunc`).
-    - Providing Cobra integration helpers (`PersistentPreRunE`, `PersistentPostRunE`).
-- **Key Files**:
-    - `setup/setup.go`
-    - `setup/setup_helpers.go`
-    - `configs/configs.go`
-    - `configs/constants.go`
-
-## 2. Observability Specialist
-**Focus**: OpenTelemetry (OTEL) integration, instrumentation, and exporter configuration.
-
-- **Responsibilities**:
-    - Configuring Tracer, Meter, and Logger providers.
-    - Managing OTLP gRPC exporters and connections.
-    - Implementing runtime instrumentation and resource attributes.
-    - Maintaining the `telemetry-example` infrastructure (Docker Compose, Grafana LGTM).
-- **Key Files**:
-    - `telemetry/setup.go`
-    - `telemetry/tracer.go`
-    - `telemetry/meter.go`
-    - `setup/telemetry.go`
-    - `setup/logs.go`
-    - `docker-compose-telemetry.yml`
-
-## 3. Log Security Specialist
-**Focus**: Structured logging, attribute redaction, and log handler implementation.
-
-- **Responsibilities**:
-    - Maintaining the `logs` package and the `Logger` interface.
-    - Implementing and optimizing the `RedactHandler` for sensitive data protection.
-    - Integrating `slog` with OpenTelemetry via bridge handlers.
-- **Key Files**:
-    - `logs/logger.go`
-    - `setup/logs.go`
-    - `setup/redact_handler.go`
-    - `setup/redact_handler_test.go`
-
-## 4. Networking Expert
-**Focus**: Instrumented HTTP clients/servers, middleware, and trace propagation.
-
-- **Responsibilities**:
-    - Maintaining the `http/client` and `http/server` packages.
-    - Implementing `RoundTripper` logic for request/response logging.
-    - Maintaining server-side middleware (logging, auth, telemetry).
-    - Ensuring trace context propagation across service boundaries using `otelhttp`.
-- **Key Files**:
-    - `http/client/client.go`
-    - `http/client/logging.go`
-    - `http/server/logging.go`
-    - `http/server/telemetry.go`
-    - `http/server/auth.go`
-    - `http/server/model.go`
-    - `http/logging/logging.go`
-
-## Task Delegation Guide
-
-| Task Category | Recommended Agent |
-|---------------|-------------------|
-| Adding a new configuration source | Core Architect |
-| Implementing API key authentication | Networking Expert |
-| Fixing a trace propagation issue | Networking Expert |
-| Implementing a new metrics exporter | Observability Specialist |
-| Adding keys to the redaction list | Log Security Specialist |
-| Troubleshooting Docker Compose stack | Observability Specialist |
-| Benchmarking log redaction performance | Log Security Specialist |
-| Adding Cobra CLI integration | Core Architect |
+- **Env prefix**: `WithEnvPrefix("MYAPP")` lowercases to `myapp` internally, but Viper uppercases for env matching → expect `MYAPP_*` env vars (not `myapp_*`).
+- **Config key dots**: `log.format` in code → nested YAML: `log: { format: json }`. Viper's `SetEnvKeyReplacer` replaces `.` with `_` for env vars → `APP_LOG_FORMAT`.
+- **Log output required**: At least one of `log.output_to_stdout`, `log.output_to_file`, or OTEL logs endpoint must be configured, or `InitSetup` returns an error.
+- **Redacted keys**: Accept YAML lists **or** comma-separated env var strings (e.g. `APP_LOG_REDACTED_KEYS=password,token,authorization`). Matching is case-insensitive partial via `strings.Contains`.
+- **Default log output**: `GetDefaultValues()` sets `log.output_to_stdout = true` unless explicitly overridden.
+- **Telemetry**: Not enabled by default. `IsEnabled()` returns true only if `Enabled == true` **and** at least one endpoint is non-empty.
+- **Tests**: Use `t.Context()` (Go 1.26+). Direct tests in each package; benchmarks in `setup/redact_handler_benchmark_test.go`.
+- **CI**: Runs `go mod tidy`, `make test`, `make vulncheck`, and `golangci-lint-action` — does NOT run `make lint`.
+- **otelhttp span naming**: `TelemetryMiddleware` uses custom `SpanNameFormatter` that prefers `r.Pattern` over path.
+- **Auth**: `AuthenticationMiddleware` returns `func(http.Handler) http.Handler`. bcrypt-based `ApiKeyMap` uses HMAC lookup token to reduce bcrypt comparisons.
+- **Log attrib replacer**: `logAttrsReplacerFunc` in `setup/logs.go:208` keeps `host`, `service.*`, `error`, `source`, `request*`, `response*`, maps `msg`→`message`; all other attrs pass through.
+- **Telemetry shutdown**: `TelemetryShutdown(ctx)` also closes log files. Called automatically by `PersistentPostRunE`.

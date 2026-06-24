@@ -1,34 +1,22 @@
 # Examples
 
-This directory contains various usage examples for the `initial-config-go` library.
+This directory contains usage examples for the `initial-config-go` library.
 
-## Available Examples
+| Example | What it shows |
+|---------|---------------|
+| [basic](./basic) | Minimal InitSetup with default settings and basic slog logging |
+| [custom-config](./custom-config) | `WithDefaultValues`, `WithProps`, custom env prefix, config file overrides |
+| [http-client](./http-client) | Instrumented HTTP client with request/response logging |
+| [http-server](./http-server) | HTTP server with telemetry, request logging, and API key auth middleware |
+| [redaction](./redaction) | Sensitive key redaction via `log.redacted_keys` |
+| [telemetry](./telemetry) | Full OpenTelemetry (traces, metrics, logs) with config file |
 
-### 1. [Basic](./basic)
-A minimal example showing how to initialize the library with default settings and perform basic logging.
+## Running
 
-### 2. [Custom Configuration](./custom-config)
-Shows how to:
-- Define custom configuration keys and default values.
-- Use `WithProps` for manual property setting.
-- Set a custom environment variable prefix.
-- Overwrite values via environment variables.
-
-### 3. [HTTP Client](./http-client)
-Demonstrates the use of the instrumented HTTP client, which provides:
-- Automatic request/response logging.
-- Trace propagation (when telemetry is enabled).
-
-### 4. [Redaction](./redaction)
-Shows how to configure and use the log redaction feature to protect sensitive data (e.g., passwords, API keys) from being leaked into logs.
-
-### 5. [Telemetry](./telemetry)
-A comprehensive example showing full OpenTelemetry integration (Traces, Metrics, and Logs) with a Grafana LGTM stack.
-
-## Running the Examples
-
-Each example has a `Makefile` for convenience. Navigate to the example directory and run:
+Each example has a `Makefile`. Run from the example directory:
 
 ```bash
 make run
 ```
+
+Override config values with environment variables using the configured prefix (e.g. `APP_LOG_LEVEL=debug make run`).

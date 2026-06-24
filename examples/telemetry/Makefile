@@ -1,3 +1,5 @@
+run:
+	go run main.go
 
 stop:
 	docker compose down

@@ -48,6 +48,11 @@ func GetTelemetryEnabled() bool {
 	return viper.GetBool(TelemetryEnabledKey)
 }
 
+// GetTelemetryDebugEnabled returns whether OpenTelemetry debug mode is enabled.
+func GetTelemetryDebugEnabled() bool {
+	return viper.GetBool(TelemetryDebugKey)
+}
+
 // GetTraceBackendEndpoint returns the configured OTLP trace backend endpoint.
 func GetTraceBackendEndpoint() string {
 	return viper.GetString(TelemetryTracesBackendEndpointKey)

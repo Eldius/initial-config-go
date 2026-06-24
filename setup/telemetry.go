@@ -5,13 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"github.com/eldius/initial-config-go/http/client"
+	"github.com/go-logr/logr"
 	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/eldius/initial-config-go/configs"
 	"github.com/eldius/initial-config-go/telemetry"
-	"github.com/go-logr/logr"
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -54,6 +55,10 @@ func InitTelemetry(ctx context.Context, telemetryOpts ...telemetry.Option) error
 		cfg.Enabled = configs.GetTelemetryEnabled()
 	}
 
+	if !cfg.Debug {
+		cfg.Debug = configs.GetTelemetryDebugEnabled()
+	}
+
 	l := slog.With(
 		"component", "telemetry",
 		"enabled", cfg.IsEnabled())
@@ -64,7 +69,11 @@ func InitTelemetry(ctx context.Context, telemetryOpts ...telemetry.Option) error
 		return nil
 	}
 
-	otel.SetLogger(logr.FromSlogHandler(slog.Default().Handler()))
+	if cfg.Debug {
+		if err := setupTelemetryDebugLog(); err != nil {
+			return fmt.Errorf("failed to setup telemetry debug log: %w", err)
+		}
+	}
 
 	if err := meterProvider(ctx, *cfg); err != nil {
 		return err
@@ -81,6 +90,20 @@ func InitTelemetry(ctx context.Context, telemetryOpts ...telemetry.Option) error
 	); err != nil {
 		return fmt.Errorf("failed to start runtime instrumentation: %w", err)
 	}
+	return nil
+}
+
+func setupTelemetryDebugLog() error {
+	otelLogFile, err := os.Create("otel.log")
+	if err != nil {
+		return fmt.Errorf("failed to open otel log file: %w", err)
+	}
+	otelLog := slog.NewJSONHandler(otelLogFile, &slog.HandlerOptions{
+		AddSource:   true,
+		Level:       slog.LevelDebug,
+		ReplaceAttr: logAttrsReplacerFunc(),
+	})
+	otel.SetLogger(logr.FromSlogHandler(otelLog))
 	return nil
 }
 

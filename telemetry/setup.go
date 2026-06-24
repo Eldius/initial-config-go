@@ -12,6 +12,7 @@ type OTELConfigs struct {
 		Logs    string
 	}
 	Enabled bool
+	Debug   bool
 }
 
 func (t *OTELConfigs) IsEnabled() bool {
@@ -59,5 +60,12 @@ func WithService(name, version, env string) Option {
 		cfg.Service.Name = name
 		cfg.Service.Version = version
 		cfg.Service.Environment = env
+	}
+}
+
+// WithDebugEnabled enables or disables OTEL debug mode.
+func WithDebugEnabled(debug bool) Option {
+	return func(cfg *OTELConfigs) {
+		cfg.Debug = debug
 	}
 }

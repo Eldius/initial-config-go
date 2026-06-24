@@ -23,6 +23,7 @@ const (
 	TelemetryTracesBackendEndpointKey  = "telemetry.traces.endpoint"
 	TelemetryMetricsBackendEndpointKey = "telemetry.metrics.endpoint"
 	TelemetryLogsBackendEndpointKey    = "telemetry.logs.endpoint"
+	TelemetryDebugKey                  = "telemetry.debug"
 )
 
 var (

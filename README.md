@@ -51,16 +51,17 @@ func main() {
 
 ## Configuration
 
-The library uses a hierarchical configuration approach:
-1. Explicitly set properties or defaults.
-2. Environment variables.
-3. Configuration file (`config.yaml`).
+The library uses a hierarchical configuration approach (Viper precedence):
 
-### Default Search Locations
-The library searches for `config.yaml` in:
+1. **Defaults** (lowest) — set via `WithDefaultValues` or `WithProps`.
+2. **Config file** — YAML from `~/.<appName>/`, `~/`, or `.`.
+3. **Environment variables** (highest) — override everything above.
+
+### Config File Search Locations
+The library searches for `<name>.yaml` (default name: `config`) in:
 - `~/.<appName>/`
 - `~/`
-- `.` (Current working directory)
+- `.` (current working directory)
 
 ### Customizing Initialization
 
@@ -80,19 +81,36 @@ setup.InitSetup(ctx, "my-app",
 )
 ```
 
+> **Note:** `WithEnvPrefix("MYAPP")` lowercases the prefix to `myapp` internally, but Viper uppercases it for environment matching — use `MYAPP_*` env vars (e.g. `MYAPP_LOG_FORMAT=json`).
+
 ### Configuration Keys
+
+When using `InitSetup` the effective defaults are:
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `log.format` | string | `text` | `json` or `text` |
 | `log.level` | string | `info` | `debug`, `info`, `warn`, `error` |
 | `log.output_to_file` | string | `""` | Path to log file (empty to disable) |
-| `log.output_to_stdout` | bool | `false` | Enable/disable stdout logging |
+| `log.output_to_stdout` | bool | `true` | Enable/disable stdout logging |
 | `log.redacted_keys` | []string | `[]` | Keys to redact from logs |
 | `telemetry.enabled` | bool | `false` | Enable OpenTelemetry |
 | `telemetry.traces.endpoint` | string | `""` | OTLP Traces gRPC endpoint |
 | `telemetry.metrics.endpoint` | string | `""` | OTLP Metrics gRPC endpoint |
 | `telemetry.logs.endpoint` | string | `""` | OTLP Logs gRPC endpoint |
+
+Config keys use dots as separators (`log.format`). In YAML this maps to nested structure:
+
+```yaml
+log:
+  format: json
+  level: debug
+  output_to_stdout: true
+telemetry:
+  enabled: true
+  traces:
+    endpoint: "localhost:4317"
+```
 
 ## Logging
 
@@ -207,7 +225,7 @@ authFunc := server.SingleUserApiKeyAuthenticationFunc(
     "my-secret-key", "", user,
 )
 
-// Multi-user API key authentication (bcrypt-hashed keys)
+// Multi-user API key authentication (bcrypt-hashed keys with HMAC lookup token)
 apiKeyMap, _ := server.NewApiKeyMapFromPlainMap(map[string]server.User{
     "key-for-user-a": userA,
     "key-for-user-b": userB,
@@ -217,6 +235,36 @@ authFunc := server.MultipleUserApiKeyAuthenticationFunc(apiKeyMap, "")
 // Protect routes with authentication
 protected := server.AuthenticationMiddleware(authFunc)
 mux.Handle("GET /api/protected", protected(http.HandlerFunc(handler)))
+```
+
+### Combined Example
+
+```go
+import (
+    "net/http"
+    "github.com/eldius/initial-config-go/setup"
+    "github.com/eldius/initial-config-go/http/server"
+)
+
+func main() {
+    setup.InitSetup(context.Background(), "my-server")
+    mux := http.NewServeMux()
+    
+    // Public route
+    mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
+        w.Write([]byte("ok"))
+    })
+    
+    // Protected route with single API key
+    auth := server.AuthenticationMiddleware(
+        server.SingleUserApiKeyAuthenticationFunc("my-key", "", myUser{}),
+    )
+    mux.Handle("GET /api/protected", auth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        w.Write([]byte("secret data"))
+    })))
+    
+    http.ListenAndServe(":8080", server.TelemetryMiddleware(mux))
+}
 ```
 
 ## Development

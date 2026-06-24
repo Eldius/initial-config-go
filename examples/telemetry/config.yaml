@@ -1,5 +1,3 @@
----
-debug: true
 log:
   level: debug
   format: json
@@ -8,8 +6,8 @@ log:
 telemetry:
   enabled: true
   traces:
-    endpoint: "otlp:4317"
+    endpoint: "localhost:4317"
   metrics:
-    endpoint: "otlp:4317"
+    endpoint: "localhost:4317"
   logs:
-    endpoint: "otlp:4317"
+    endpoint: "localhost:4317"
