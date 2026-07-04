@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/XSAM/otelsql"
 	"github.com/jmoiron/sqlx"
+	"go.opentelemetry.io/otel"
 	semconv "go.opentelemetry.io/otel/semconv/v1.28.0"
 )
 
@@ -19,6 +20,11 @@ func GetSqlxDB(driver, connStr string) (*sqlx.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
+
+	if err := instrumentOtelSQL(db.DB); err != nil {
+		return nil, fmt.Errorf("failed to instrument otelsql: %w", err)
+	}
+
 	return db, nil
 }
 
@@ -33,6 +39,10 @@ func GetDB(driver, connStr string) (*sql.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
+
+	if err := instrumentOtelSQL(db); err != nil {
+		return nil, fmt.Errorf("failed to instrument otelsql: %w", err)
+	}
 	return db, nil
 }
 
@@ -42,5 +52,12 @@ func registerOtelSQL(driver string) (string, error) {
 		otelsql.WithSpanOptions(otelsql.SpanOptions{
 			DisableErrSkip: true,
 		}),
+	)
+}
+
+func instrumentOtelSQL(db *sql.DB) error {
+	return otelsql.RegisterDBStatsMetrics(db,
+		otelsql.WithTracerProvider(otel.GetTracerProvider()),
+		otelsql.WithMeterProvider(otel.GetMeterProvider()),
 	)
 }
