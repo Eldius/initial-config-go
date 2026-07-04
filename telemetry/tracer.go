@@ -14,6 +14,7 @@ var (
 
 // GetTracer returns a tracer instance.
 func GetTracer(tracerName string, opts ...trace.TracerOption) trace.Tracer {
+	opts = append(opts, trace.WithInstrumentationAttributes(getDefaultTelemetryAttributes(cfgCache)...))
 	return otel.GetTracerProvider().Tracer(tracerName, opts...)
 }
 

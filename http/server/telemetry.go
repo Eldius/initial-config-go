@@ -2,6 +2,7 @@ package server
 
 import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
 	"net/http"
 	"strings"
 )
@@ -21,5 +22,8 @@ func TelemetryMiddleware(mux *http.ServeMux) http.Handler {
 				return pattern
 			}
 			return r.Method + " " + pattern
-		}))
+		}),
+		otelhttp.WithMeterProvider(otel.GetMeterProvider()),
+		otelhttp.WithTracerProvider(otel.GetTracerProvider()),
+	)
 }
