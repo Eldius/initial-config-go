@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go.opentelemetry.io/otel/attribute"
 	"log/slog"
 	"os"
 	"time"
@@ -32,6 +33,8 @@ var (
 	ErrMeterInitialization             = errors.New("initializing meter")
 	ErrMetricsConnectionInitialization = errors.New("initializing metrics connection")
 	ErrMetricsExporterInitialization   = errors.New("initializing metric exporter")
+
+	cfgCache OTELConfigs
 )
 
 func InitTelemetry(ctx context.Context, telemetryOpts ...Option) error {
@@ -61,6 +64,8 @@ func InitTelemetry(ctx context.Context, telemetryOpts ...Option) error {
 
 	l.Debug("configuring telemetry")
 
+	cfgCache = *cfg
+
 	if !cfg.IsEnabled() {
 		return nil
 	}
@@ -80,7 +85,8 @@ func InitTelemetry(ctx context.Context, telemetryOpts ...Option) error {
 
 	// Start the runtime instrumentation
 	if err := runtime.Start(
-		runtime.WithMinimumReadMemStatsInterval(5 * time.Second),
+		runtime.WithMinimumReadMemStatsInterval(5*time.Second),
+		runtime.WithMeterProvider(otel.GetMeterProvider()),
 	); err != nil {
 		return fmt.Errorf("failed to start runtime instrumentation: %w", err)
 	}
@@ -197,7 +203,7 @@ func defaultResources(cfg OTELConfigs) *resource.Resource {
 		semconv.SchemaURL,
 		semconv.ServiceNameKey.String(cfg.Service.Name),
 		semconv.ServiceVersionKey.String(cfg.Service.Version),
-		semconv.GCPAppHubServiceEnvironmentTypeKey.String(cfg.Service.Environment),
+		semconv.DeploymentEnvironmentNameKey.String(cfg.Service.Environment),
 	)
 	return res
 }
@@ -208,4 +214,12 @@ func newGrpcConnection(endpoint string) (*grpc.ClientConn, error) {
 		// Note the use of insecure transport here. TLS is recommended in production.
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
+}
+
+func getDefaultTelemetryAttributes(cfg OTELConfigs) []attribute.KeyValue {
+	return []attribute.KeyValue{
+		semconv.ServiceNameKey.String(cfg.Service.Name),
+		semconv.ServiceVersionKey.String(cfg.Service.Version),
+		semconv.DeploymentEnvironmentNameKey.String(cfg.Service.Environment),
+	}
 }

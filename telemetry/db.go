@@ -6,7 +6,6 @@ import (
 	"github.com/XSAM/otelsql"
 	"github.com/jmoiron/sqlx"
 	"go.opentelemetry.io/otel"
-	semconv "go.opentelemetry.io/otel/semconv/v1.28.0"
 )
 
 // GetSqlxDB returns a database connection.
@@ -48,7 +47,9 @@ func GetDB(driver, connStr string) (*sql.DB, error) {
 
 func registerOtelSQL(driver string) (string, error) {
 	return otelsql.Register(driver,
-		otelsql.WithAttributes(semconv.DBSystemSqlite),
+		otelsql.WithTracerProvider(otel.GetTracerProvider()),
+		otelsql.WithMeterProvider(otel.GetMeterProvider()),
+		otelsql.WithAttributes(getDefaultTelemetryAttributes(cfgCache)...),
 		otelsql.WithSpanOptions(otelsql.SpanOptions{
 			DisableErrSkip: true,
 		}),
@@ -59,5 +60,6 @@ func instrumentOtelSQL(db *sql.DB) error {
 	return otelsql.RegisterDBStatsMetrics(db,
 		otelsql.WithTracerProvider(otel.GetTracerProvider()),
 		otelsql.WithMeterProvider(otel.GetMeterProvider()),
+		otelsql.WithAttributes(getDefaultTelemetryAttributes(cfgCache)...),
 	)
 }
