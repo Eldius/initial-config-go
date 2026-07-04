@@ -13,7 +13,6 @@ import (
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
@@ -27,12 +26,12 @@ import (
 )
 
 var (
-	ErrTracesInitialization             = errors.New("initializing tracer")
-	ErrTracesConnectionInitialization   = errors.New("initializing traces connection")
-	ErrTracesExporterInitialization     = errors.New("initializing trace exporter")
-	ErrMeterInitialization              = errors.New("initializing meter")
-	ErrMetricsConnectionInitialization  = errors.New("initializing metrics connection")
-	ErrMetricsExporterInitialization    = errors.New("initializing metric exporter")
+	ErrTracesInitialization            = errors.New("initializing tracer")
+	ErrTracesConnectionInitialization  = errors.New("initializing traces connection")
+	ErrTracesExporterInitialization    = errors.New("initializing trace exporter")
+	ErrMeterInitialization             = errors.New("initializing meter")
+	ErrMetricsConnectionInitialization = errors.New("initializing metrics connection")
+	ErrMetricsExporterInitialization   = errors.New("initializing metric exporter")
 )
 
 func InitTelemetry(ctx context.Context, telemetryOpts ...Option) error {
@@ -131,13 +130,6 @@ func tracerProvider(ctx context.Context, cfg OTELConfigs) error {
 		return err
 	}
 
-	res := resource.NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.ServiceNameKey.String(cfg.Service.Name),
-		semconv.ServiceVersionKey.String(cfg.Service.Version),
-		attribute.String("environment", cfg.Service.Environment),
-	)
-
 	prop := propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{},
 		propagation.Baggage{},
@@ -149,7 +141,7 @@ func tracerProvider(ctx context.Context, cfg OTELConfigs) error {
 	bsp := sdktrace.NewBatchSpanProcessor(exporter)
 	provider := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithResource(res),
+		sdktrace.WithResource(defaultResources(cfg)),
 		sdktrace.WithSpanProcessor(bsp),
 	)
 
@@ -205,7 +197,7 @@ func defaultResources(cfg OTELConfigs) *resource.Resource {
 		semconv.SchemaURL,
 		semconv.ServiceNameKey.String(cfg.Service.Name),
 		semconv.ServiceVersionKey.String(cfg.Service.Version),
-		attribute.String("environment", cfg.Service.Environment),
+		semconv.GCPAppHubServiceEnvironmentTypeKey.String(cfg.Service.Environment),
 	)
 	return res
 }
