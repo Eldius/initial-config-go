@@ -31,8 +31,6 @@ func initLogs(ctx context.Context, appName string, options Options) error {
 
 func setupLogs(ctx context.Context, appName, format, level, logOutputFile string, stdout bool, options Options, keysToRedact ...string) error {
 
-	fmt.Println("setting up logs")
-
 	cfg := telemetry.NewDefaultCfg()
 
 	for _, o := range options.OpenTelemetryOptions {
@@ -56,7 +54,6 @@ func setupLogs(ctx context.Context, appName, format, level, logOutputFile string
 	}
 
 	if cfg.Enabled && cfg.Endpoints.Logs != "" {
-		fmt.Println("setting up logs with OpenTelemetry")
 		exporter, err := logShipper(ctx, cfg.Endpoints.Logs)
 		if err != nil {
 			return fmt.Errorf("creating log exporter: %w", err)
