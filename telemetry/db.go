@@ -57,9 +57,11 @@ func registerOtelSQL(driver string) (string, error) {
 }
 
 func instrumentOtelSQL(db *sql.DB) error {
-	return otelsql.RegisterDBStatsMetrics(db,
+	_, err := otelsql.RegisterDBStatsMetrics(db,
 		otelsql.WithTracerProvider(otel.GetTracerProvider()),
 		otelsql.WithMeterProvider(otel.GetMeterProvider()),
 		otelsql.WithAttributes(getDefaultTelemetryAttributes(cfgCache)...),
 	)
+
+	return err
 }
