@@ -1,46 +1,42 @@
 # initial-config-go
 
-Go library for app bootstrapping (Viper config + slog logging + OpenTelemetry).
+Go library for app bootstrapping: Viper config + slog logging + OpenTelemetry. Library only — runnable demos live in `examples/` (basic, custom-config, http-client, http-server, redaction, telemetry, grafana).
 
-Module: `github.com/eldius/initial-config-go` / Go 1.26.4
+Module `github.com/eldius/initial-config-go`, Go 1.27 per `go.mod` (CI pins 1.26.1 and relies on toolchain auto-switch).
 
 ## Commands
 
 | Command | What |
 |---|---|
 | `make test` / `task test` | `go test ./... -cover` |
-| `make lint` / `task lint` | `golangci-lint run` |
-| `make vulncheck` / `task vulncheck` | `go tool govulncheck ./...` |
-| `make validate` / `task validate` | test + lint + vulncheck (order matters) |
+| `make lint` / `task lint` | `golangci-lint run` (no `.golangci.yml` — default linters) |
+| `make vulncheck` | `go tool govulncheck ./...` |
+| `make validate` | test → lint → vulncheck |
 | `make benchmark` | `go test -bench=. -benchmem -count=20 ./...` |
-| `make release` | tags next version and pushes |
-| `make telemetry-example` | Docker Compose Grafana LGTM stack |
+| `make release` | validates, then tags next patch version and **pushes to origin** — don't run unless asked |
+| `make telemetry-example` | Docker Compose Grafana LGTM demo stack |
 
-Tools are declared in `go.mod` `tool` directives — use `go tool <name>`.
+Make/Task call bare `golangci-lint` / `task`; if missing from PATH use `go tool golangci-lint run` / `go tool task ...` (both declared as `go.mod` tool deps).
 
-## Key packages
+## Packages
 
-- **`setup`** — public entrypoint: `InitSetup(ctx, appName, opts...)`. Cobra helpers: `PersistentPreRunE`, `PersistentPostRunE` in `setup/setup_helpers.go`. Options: `WithInstrumentHTTPClient`, `WithOpenTelemetryOptions`, etc.
-- **`configs`** — config key constants, accessor funcs via Viper.
-- **`logs`** — `logs.NewLogger(ctx)` returns a `Logger` interface. Also: `NewRedactHandler`, `LogHandler` (JSON/text factory), `LogAttrsReplacerFunc` (msg→message), `GetWriter`, `CloseLogFiles`.
-- **`telemetry`** — `InitTelemetry(ctx, opts...)`, `ProviderSet` (getter/setter for meter/tracer/logger providers), `TelemetryShutdown(ctx)`, `TelemetryForceFlush(ctx)`. Also exports `GetSqlxDB`/`GetDB` for instrumented SQL via `otelsql`, and `NewSpan`/`GetTracer`/`GetMeter`.
-- **`http/client`** — `NewHTTPClient()` returns `*http.Client`; `NewClient()` returns `HttpClient` interface.
-- **`http/server`** — `TelemetryMiddleware(mux)`, `LoggingMiddleware`, `AuthenticationMiddleware`, `SingleUserApiKeyAuthenticationFunc`, `MultipleUserApiKeyAuthenticationFunc` (bcrypt + lookup token).
-- **`http/logging`** — shared `HTTPRequestLogRecord`, `HTTPRequestData`, `HTTPResponseData` types.
+- **`setup`** — entrypoint `InitSetup(ctx, appName, opts...)`: wires Viper → logs → telemetry. Cobra helpers `PersistentPreRunE(appName, opts...)` / `PersistentPostRunE(waitTime)` in `setup/setup_helpers.go` (the post-run sleep gives OTel batch processors time to flush).
+- **`configs`** — `log.*` / `telemetry.*` key constants + Viper accessors.
+- **`logs`** — `NewLogger(ctx, ...)` facade over slog; `NewRedactHandler`, `LogHandler`, `GetWriter` / `CloseLogFiles`.
+- **`telemetry`** — `InitTelemetry`, `ProviderSet` getters/setters, `TelemetryShutdown` (also closes log files), `GetSqlxDB` / `GetDB` (otelsql-instrumented), `NewSpan` / `GetTracer` / `GetMeter`.
+- **`http/client`** — `NewHTTPClient()` (otelhttp transport), `NewClient()` interface wrapper.
+- **`http/server`** — `TelemetryMiddleware`, `LoggingMiddleware`, `AuthenticationMiddleware` (+ single/multiple API-key auth funcs; `ApiKeyMap` buckets keys by HMAC lookup token to avoid one bcrypt compare per stored key per request).
+- **`http/logging`** — shared request/response log record types.
 
 ## Gotchas
 
-- **Env prefix**: `WithEnvPrefix("MYAPP")` lowercases to `myapp` internally, but Viper uppercases for env matching → expect `MYAPP_*` env vars (not `myapp_*`).
-- **Config key dots**: `log.format` in code → nested YAML: `log: { format: json }`. Viper's `SetEnvKeyReplacer` replaces `.` with `_` for env vars → `APP_LOG_FORMAT`.
-- **Log output required**: At least one of `log.output_to_stdout`, `log.output_to_file`, or OpenTelemetry logs endpoint must be configured, or `InitSetup` returns an error.
-- **Redacted keys**: Accept YAML lists **or** comma-separated env var strings (e.g. `APP_LOG_REDACTED_KEYS=password,token,authorization`). Matching is case-insensitive partial via `strings.Contains`.
-- **Default log output**: `Options.GetDefaultValues()` sets `log.output_to_stdout = true` unless explicitly overridden.
-- **Telemetry**: Not enabled by default. `OTELConfigs.IsEnabled()` returns true only if `Enabled == true` **and** at least one endpoint is non-empty.
-- **Tests**: Use `t.Context()` (Go 1.26+). External test packages to avoid import cycles (e.g. `telemetry/shutdown_test.go` uses `package telemetry_test`).
-- **CI**: Runs `go mod tidy`, `make test`, `make vulncheck`, and `golangci-lint-action` — does NOT run `make lint`.
-- **otelhttp span naming**: `TelemetryMiddleware` uses custom `SpanNameFormatter` that prefers `r.Pattern` over path.
-- **Auth**: `AuthenticationMiddleware` returns `func(http.Handler) http.Handler`. bcrypt-based `ApiKeyMap` uses HMAC lookup token to reduce bcrypt comparisons.
-- **Log attrib replacer**: `logs.LogAttrsReplacerFunc()` keeps `host`, `service.*`, `error`, `source`, `request*`, `response*`, maps `msg`→`message`; all other attrs pass through.
-- **Default HTTP client**: NOT instrumented by default. Use `setup.WithInstrumentHTTPClient(true)` to replace `http.DefaultClient` with OTel-instrumented client, or call `client.NewHTTPClient()` explicitly.
-- **Telemetry shutdown**: `telemetry.TelemetryShutdown(ctx)` also closes log files. Called automatically by `PersistentPostRunE`.
-- **Benchmarks**: in `logs/redact_handler_benchmark_test.go`.
+- **Env vars**: `WithEnvPrefix("MYAPP")` is lowercased internally but Viper uppercases for matching → expect `MYAPP_*`. Default prefix is `app` → `APP_*`. `.` in keys becomes `_` (`log.format` → `APP_LOG_FORMAT`).
+- **Log output validation**: `InitSetup` fails only if `log.output_to_stdout=false` AND `log.output_to_file` is empty. The check runs before the OTel branch, so an OTel logs endpoint does NOT satisfy it. Default is stdout=true.
+- **OTel log shipping hijacks slog**: when telemetry is enabled AND `telemetry.logs.endpoint` is set, slog's default handler is replaced by the otelslog bridge — stdout/file logging is skipped entirely.
+- **Redacted keys** (`log.redacted_keys`): YAML list or comma-separated env string (`APP_LOG_REDACTED_KEYS=password,token`). Case-insensitive substring match via `strings.Contains`.
+- **Telemetry off by default**: `OTELConfigs.IsEnabled()` = `Enabled && ≥1 endpoint`. All OTLP exporters use insecure gRPC → endpoints are `host:port` (e.g. `localhost:4317`), no scheme/TLS.
+- **Default HTTP client is NOT instrumented**: `setup.WithInstrumentHTTPClient(true)` replaces `http.DefaultClient`; otherwise call `client.NewHTTPClient()` explicitly.
+- **otelhttp span names**: `TelemetryMiddleware` names spans from `r.Pattern` (Go 1.22+ mux pattern), falling back to `METHOD path`.
+- **`LogAttrsReplacerFunc`** effectively only renames `msg`→`message`; all other attrs pass through unchanged (its keep-lists are no-ops).
+- **Tests**: use `t.Context()`. `telemetry/shutdown_test.go` is `package telemetry_test` (external, avoids import cycle). `setup/logs_test.go` writes `my-log-file*.log` into `setup/` — those files are committed, so running tests can dirty `git status`.
+- **CI** (`.github/workflows/ci.yml`): `go mod tidy`, `make test`, `make vulncheck`, golangci-lint-action — it does NOT run `make lint` / `make validate`.

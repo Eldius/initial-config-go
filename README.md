@@ -12,9 +12,8 @@
     - JSON and Text formats.
     - Output to stdout, files, or both.
     - Attribute redaction for sensitive data.
-    - Automatic trace and span ID inclusion when OpenTelemetry is enabled.
     - Log shipping to OpenTelemetry collectors.
-- **OpenTelemetry**: Integrated support for Traces, Metrics, and Logs.
+- **OpenTelemetry**: Integrated support for Traces, Metrics, and Logs, including runtime instrumentation and instrumented SQL connections (`telemetry.GetDB` / `telemetry.GetSqlxDB` via `otelsql`).
 - **HTTP Client**: Instrumented HTTP client with automatic trace propagation and request/response logging.
 - **HTTP Server**: Middleware for request/response logging, OpenTelemetry instrumentation, and API key authentication.
 
@@ -81,7 +80,7 @@ setup.InitSetup(ctx, "my-app",
 )
 ```
 
-> **Note:** `WithEnvPrefix("MYAPP")` lowercases the prefix to `myapp` internally, but Viper uppercases it for environment matching — use `MYAPP_*` env vars (e.g. `MYAPP_LOG_FORMAT=json`).
+> **Note:** `WithEnvPrefix("MYAPP")` lowercases the prefix internally, but Viper uppercases it for environment matching — use `MYAPP_*` env vars (e.g. `MYAPP_LOG_FORMAT=json`). Without `WithEnvPrefix`, the default prefix is `app` → use `APP_*` env vars. Dots in keys become underscores (`log.format` → `APP_LOG_FORMAT`).
 
 ### Configuration Keys
 
@@ -98,6 +97,9 @@ When using `InitSetup` the effective defaults are:
 | `telemetry.traces.endpoint` | string | `""` | OTLP Traces gRPC endpoint |
 | `telemetry.metrics.endpoint` | string | `""` | OTLP Metrics gRPC endpoint |
 | `telemetry.logs.endpoint` | string | `""` | OTLP Logs gRPC endpoint |
+| `telemetry.debug` | bool | `false` | Write OTel SDK debug logs to `otel.log` |
+
+Endpoints are `host:port` (e.g. `localhost:4317`) — all OTLP exporters use insecure gRPC, so no scheme or TLS. Telemetry only activates when `telemetry.enabled` is `true` **and** at least one endpoint is set.
 
 Config keys use dots as separators (`log.format`). In YAML this maps to nested structure:
 
@@ -116,7 +118,9 @@ telemetry:
 
 ### Structured Logging with Context
 
-> **Note:** At least one log output must be configured — either stdout (`log.output_to_stdout: true`), a file (`log.output_to_file: /path/to/log.log`), or an OpenTelemetry logs endpoint. Otherwise `InitSetup` will return an error.
+> **Note:** At least one of stdout (`log.output_to_stdout: true`) or a file (`log.output_to_file: /path/to/log.log`) must be configured, otherwise `InitSetup` returns an error. An OpenTelemetry logs endpoint does **not** satisfy this check (stdout is on by default, so you usually don't need to care).
+>
+> When telemetry is enabled **and** `telemetry.logs.endpoint` is set, slog's default handler is replaced by the OTel bridge — stdout/file logging is skipped entirely and logs go to the collector instead.
 
 Use the `logs` package to create loggers that automatically include trace information:
 
@@ -154,6 +158,17 @@ import "github.com/eldius/initial-config-go/logs"
 handler := logs.NewRedactHandler(slog.NewJSONHandler(w, nil), []string{"password"})
 logger := slog.New(handler)
 ```
+
+## Cobra Integration
+
+If your app uses [Cobra](https://github.com/spf13/cobra), the `setup` package provides `PersistentPreRunE` / `PersistentPostRunE` helpers that handle init, per-command spans, and graceful telemetry shutdown:
+
+```go
+rootCmd.PersistentPreRunE = setup.PersistentPreRunE("my-app")
+rootCmd.PersistentPostRunE = setup.PersistentPostRunE(2 * time.Second)
+```
+
+`PersistentPostRunE` flushes and shuts down the telemetry providers, then sleeps for `waitTime` so the OTel batch processors have time to export before the process exits. `TelemetryShutdown` also closes any open log files.
 
 ## OpenTelemetry
 
@@ -194,6 +209,23 @@ defer telemetry.TelemetryShutdown(ctx)
 ```
 
 > **Note:** The `http.DefaultClient` is NOT automatically instrumented. See [HTTP Client Helper](#http-client-helper) for options.
+
+### Instrumented SQL
+
+The `telemetry` package provides `GetDB` / `GetSqlxDB`, which open connections through an `otelsql`-registered driver — queries are automatically traced and metered:
+
+```go
+db, err := telemetry.GetSqlxDB("postgres", connStr)
+```
+
+### Custom Spans
+
+Use `telemetry.NewSpan` (or `telemetry.GetTracer`) to add spans anywhere:
+
+```go
+ctx, span := telemetry.NewSpan(ctx, "my-operation")
+defer span.End()
+```
 
 ## HTTP Client Helper
 
@@ -280,10 +312,13 @@ protected := server.AuthenticationMiddleware(authFunc)
 mux.Handle("GET /api/protected", protected(http.HandlerFunc(handler)))
 ```
 
+The `headerName` argument (empty string above) defaults to `X-Api-Key`. The authenticated user is available inside handlers via `server.AuthenticatedUserFromContext(r.Context())`. `NewApiKeyMapFromPlainMap` hashes the keys with bcrypt — there is also `NewApiKeyMapFromHashedMap` for pre-hashed keys.
+
 ### Combined Example
 
 ```go
 import (
+    "context"
     "net/http"
     "github.com/eldius/initial-config-go/setup"
     "github.com/eldius/initial-config-go/http/server"
@@ -314,23 +349,24 @@ func main() {
 
 ### Makefile Targets
 - `make test`: Run tests with coverage.
-- `make lint`: Run `golangci-lint`.
+- `make lint`: Run `golangci-lint` (default linters, no config file).
 - `make vulncheck`: Run `govulncheck`.
 - `make validate`: Run all the above.
-- `make benchmark`: Run benchmarks (log redact handler bench in `logs/`, OTEL setup bench in `setup/`).
+- `make benchmark`: Run benchmarks.
 - `make telemetry-example`: Run a full OTEL stack (Grafana LGTM) with a sample app using Docker Compose.
+
+All targets also exist as [Task](https://taskfile.dev) tasks (`task test`, `task lint`, ...). Both runners call bare `golangci-lint` / `task` — if they're not on your PATH, use `go tool golangci-lint run` / `go tool task ...` (declared as `go.mod` tool dependencies).
 
 ### Local Telemetry Stack
 To try the telemetry integration locally:
 ```bash
 make telemetry-example
 ```
-This will start:
-- **Grafana**: `http://localhost:3000` (Login: `admin`/`admin`)
-- **Prometheus**: `http://localhost:9090`
-- **Loki**: `http://localhost:3100`
-- **Tempo**: `http://localhost:3200`
-- **Sample App**: Automatically sending traces, metrics, and logs.
+This starts the all-in-one [Grafana LGTM](https://github.com/grafana/docker-otel-lgtm) container (Grafana + Prometheus + Loki + Tempo) plus a sample app sending traces, metrics, and logs:
+- **Grafana UI**: `http://localhost:3000` (anonymous admin)
+- **OTLP endpoints**: `localhost:4317` (gRPC), `localhost:4318` (HTTP)
+
+More runnable demos live in [`examples/`](examples/): basic, custom-config, http-client, http-server, redaction, telemetry, grafana.
 
 ## License
 Licensed under [GPL-3.0](LICENSE).
