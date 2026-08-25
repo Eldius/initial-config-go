@@ -45,6 +45,10 @@ func setupLogs(ctx context.Context, appName, format, level, logOutputFile string
 		cfg.Endpoints.Logs = configs.GetLogsBackendEndpoint()
 	}
 
+	if cfg.Endpoints.Traces == "" {
+		cfg.Endpoints.Traces = configs.GetTraceBackendEndpoint()
+	}
+
 	if !stdout && logOutputFile == "" {
 		return fmt.Errorf("%w: logOutputFile: %s / stdout: %v", ErrInvalidLogOutputConfig, logOutputFile, stdout)
 	}
@@ -96,6 +100,9 @@ func setupLogs(ctx context.Context, appName, format, level, logOutputFile string
 	h, err := logs.LogHandler(format, level, writer, keysToRedact...)
 	if err != nil {
 		return fmt.Errorf("failed to create log handler: %w", err)
+	}
+	if cfg.Enabled && cfg.Endpoints.Traces != "" {
+		h = logs.NewTracingHandler(h)
 	}
 	logger := slog.New(h)
 	host, err := os.Hostname()

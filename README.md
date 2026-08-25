@@ -12,6 +12,7 @@
     - JSON and Text formats.
     - Output to stdout, files, or both.
     - Attribute redaction for sensitive data.
+    - Automatic trace and span ID inclusion when OpenTelemetry is enabled.
     - Log shipping to OpenTelemetry collectors.
 - **OpenTelemetry**: Integrated support for Traces, Metrics, and Logs, including runtime instrumentation and instrumented SQL connections (`telemetry.GetDB` / `telemetry.GetSqlxDB` via `otelsql`).
 - **HTTP Client**: Instrumented HTTP client with automatic trace propagation and request/response logging.
@@ -135,6 +136,28 @@ func process(ctx context.Context) {
         log.WithError(err).Error("Failed to do something")
     }
 }
+```
+
+### Trace Correlation
+
+When telemetry is enabled and `telemetry.traces.endpoint` is set, log records written inside an active span automatically include `trace_id` and `span_id` attributes:
+
+```go
+ctx, span := telemetry.NewSpan(ctx, "my-operation")
+defer span.End()
+
+logs.NewLogger(ctx).Info("Processing request")
+// => {"message":"Processing request","trace_id":"4bf92f3577b34da6a3ce929d0e0e4736","span_id":"00f067aa0ba902b7",...}
+```
+
+Notes:
+- Correlation is driven by the span in the logger's context — use `logs.NewLogger(ctx)`, `slog.InfoContext(ctx, ...)`, etc. Logs without an active span are untouched.
+- When logs are shipped via `telemetry.logs.endpoint`, the `otelslog` bridge correlates natively (TraceID/SpanID are set on the exported log records, not as attributes).
+- The handler is also available directly in the `logs` package for custom pipelines:
+
+```go
+handler := logs.NewTracingHandler(slog.NewJSONHandler(w, nil))
+logger := slog.New(handler)
 ```
 
 ### Redaction
