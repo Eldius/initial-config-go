@@ -8,13 +8,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/eldius/initial-config-go/configs"
 	"github.com/eldius/initial-config-go/logs"
 	"github.com/eldius/initial-config-go/telemetry"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
-
-	"github.com/eldius/initial-config-go/configs"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
-	"go.opentelemetry.io/otel/log/global"
 	otellog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
@@ -78,7 +77,7 @@ func setupLogs(ctx context.Context, appName, format, level, logOutputFile string
 			otellog.WithProcessor(otellog.NewBatchProcessor(exporter)),
 		)
 
-		global.SetLoggerProvider(loggerProvider)
+		otel.SetLoggerProvider(loggerProvider)
 
 		telemetry.SetLoggerProvider(loggerProvider)
 
