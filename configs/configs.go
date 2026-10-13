@@ -78,3 +78,12 @@ func addAttr(m map[string]any, key string, value any) map[string]any {
 
 	return nm
 }
+
+// MergeConfigMaps merges two config maps
+func MergeConfigMaps(a map[string]any, b map[string]any) map[string]any {
+	nm := make(map[string]any)
+	maps.Copy(nm, b)
+	maps.Copy(nm, a)
+
+	return nm
+}
