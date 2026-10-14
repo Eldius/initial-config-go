@@ -48,9 +48,11 @@ func PersistentPreRunE(appName string, opts ...OptionFunc) func(cmd *cobra.Comma
 			cmd.SetContext(context.WithValue(ctx, tracingKey, &tracingData{span: span, start: start}))
 		}
 		log := logs.NewLogger(ctx, logs.KeyValueData{
-			"cmd_name":  cmd.Name(),
-			"cmd_args":  args,
-			"called_as": cmd.CalledAs(),
+			"cmd": map[string]any{
+				"cmd_name":  cmd.Name(),
+				"cmd_args":  args,
+				"called_as": cmd.CalledAs(),
+			},
 		})
 
 		log.Debug("starting trace")
@@ -79,10 +81,12 @@ func PersistentPostRunE(waitTime time.Duration) func(cmd *cobra.Command, args []
 		}
 
 		logs.NewLogger(cmd.Context(), logs.KeyValueData{
-			"cmd_name":     cmd.Name(),
-			"cmd_args":     args,
-			"is_recording": isTracing,
-			"running_time": runningTime.String(),
+			"cmd": map[string]any{
+				"cmd_name":     cmd.Name(),
+				"cmd_args":     args,
+				"is_recording": isTracing,
+				"running_time": runningTime.String(),
+			},
 		}).Debug("stopping trace")
 
 		if err := telemetry.TelemetryForceFlush(cmd.Context()); err != nil {
