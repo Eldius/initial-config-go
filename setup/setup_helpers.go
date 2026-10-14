@@ -3,6 +3,7 @@ package setup
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/eldius/initial-config-go/logs"
@@ -10,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -32,9 +34,13 @@ func PersistentPreRunE(appName string, opts ...OptionFunc) func(cmd *cobra.Comma
 		}
 		ctx := cmd.Context()
 		if otel.GetTracerProvider() != nil {
-			spanCtx, span := telemetry.NewSpan(ctx, cmd.Name(), trace.WithSpanKind(trace.SpanKindInternal))
+			spanCtx, span := telemetry.NewSpan(ctx, cmd.Name(), trace.WithSpanKind(trace.SpanKindClient))
 			span.SetAttributes(
-				attribute.StringSlice("args", args),
+				attribute.String("process.executable.name", cmd.Root().Name()),
+				attribute.Int("process.pid", os.Getpid()),
+				attribute.String("cmd_name", cmd.Name()),
+				attribute.StringSlice("process.command_args", args),
+				attribute.String("process.executable.path", cmd.CommandPath()),
 				attribute.StringSlice("aliases", cmd.Aliases),
 				attribute.String("called_as", cmd.CalledAs()),
 			)
@@ -64,7 +70,10 @@ func PersistentPostRunE(waitTime time.Duration) func(cmd *cobra.Command, args []
 		if data, ok := cmd.Context().Value(tracingKey).(*tracingData); ok && data != nil {
 			if data.span != nil {
 				isTracing = true
-				data.span.End()
+				data.span.SetStatus(codes.Ok, "")
+				data.span.SetAttributes(
+					attribute.Int("process.exit.code", 0),
+				)
 			}
 			runningTime = time.Since(data.start)
 		}

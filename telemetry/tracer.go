@@ -3,6 +3,7 @@ package telemetry
 import (
 	"context"
 	"errors"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -48,4 +49,12 @@ func GetSpanDataFromContext(ctx context.Context) TracingIDs {
 func RecordError(ctx context.Context, err error) {
 	span := trace.SpanFromContext(ctx)
 	span.RecordError(err)
+}
+
+// RecordErrorAndClose records an error in the current span associated with the provided context and closes the span.
+func RecordErrorAndClose(ctx context.Context, err error, options ...trace.SpanEndOption) error {
+	span := trace.SpanFromContext(ctx)
+	span.RecordError(err)
+	span.End(options...)
+	return err
 }
