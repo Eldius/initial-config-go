@@ -68,6 +68,42 @@ func GetLogsBackendEndpoint() string {
 	return viper.GetString(TelemetryLogsBackendEndpointKey)
 }
 
+// GetTelemetryHeaders returns the configured OTLP headers, sent with each
+// exporter request (e.g. for authentication). In config files it is a map:
+//
+//	telemetry:
+//	  headers:
+//	    x-api-key: secret
+//
+// As an environment variable it is a comma-separated list of key=value pairs:
+//
+//	APP_TELEMETRY_HEADERS="Authorization=Bearer token,X-Api-Key=secret"
+func GetTelemetryHeaders() map[string]string {
+	val := viper.Get(TelemetryHeadersKey)
+	if val == nil {
+		return map[string]string{}
+	}
+	if s, ok := val.(string); ok {
+		return parseHeadersString(s)
+	}
+	return viper.GetStringMapString(TelemetryHeadersKey)
+}
+
+func parseHeadersString(s string) map[string]string {
+	headers := make(map[string]string)
+	if s == "" {
+		return headers
+	}
+	for pair := range strings.SplitSeq(s, ",") {
+		k, v, ok := strings.Cut(pair, "=")
+		if !ok {
+			continue
+		}
+		headers[strings.TrimSpace(k)] = strings.TrimSpace(v)
+	}
+	return headers
+}
+
 // ConfigOptionFunc is a function type for configuring default options.
 type ConfigOptionFunc func(defaultOptions map[string]any)
 

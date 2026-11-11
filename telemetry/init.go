@@ -58,6 +58,10 @@ func InitTelemetry(ctx context.Context, telemetryOpts ...Option) error {
 		cfg.Debug = configs.GetTelemetryDebugEnabled()
 	}
 
+	if len(cfg.Headers) == 0 {
+		cfg.Headers = configs.GetTelemetryHeaders()
+	}
+
 	l := slog.With(
 		"component", "telemetry",
 		"enabled", cfg.IsEnabled())
@@ -123,13 +127,21 @@ func tracerProvider(ctx context.Context, cfg OTELConfigs) error {
 		conn.GetState().String(),
 	).Debug("gRPC connection to collector established")
 
-	exporter, err := otlptracegrpc.New(
-		ctx,
+	exporterOpts := []otlptracegrpc.Option{
 		otlptracegrpc.WithInsecure(),
 		otlptracegrpc.WithCompressor(gzip.Name),
 		otlptracegrpc.WithGRPCConn(conn),
 		otlptracegrpc.WithTLSCredentials(insecure.NewCredentials()),
-		otlptracegrpc.WithTimeout(10*time.Second))
+		otlptracegrpc.WithTimeout(10 * time.Second),
+	}
+	if len(cfg.Headers) > 0 {
+		exporterOpts = append(exporterOpts, otlptracegrpc.WithHeaders(cfg.Headers))
+	}
+
+	exporter, err := otlptracegrpc.New(
+		ctx,
+		exporterOpts...,
+	)
 	if err != nil {
 		err = fmt.Errorf("%w: %w: %w", ErrTracesInitialization, ErrTracesExporterInitialization, err)
 		l.With("error", err).Error("failed to setup exporter")
@@ -177,6 +189,10 @@ func meterProvider(ctx context.Context, cfg OTELConfigs) error {
 		otlpmetricgrpc.WithCompressor(gzip.Name),
 		otlpmetricgrpc.WithGRPCConn(conn),
 		otlpmetricgrpc.WithTimeout(10*time.Second))
+
+	if len(cfg.Headers) > 0 {
+		opts = append(opts, otlpmetricgrpc.WithHeaders(cfg.Headers))
+	}
 
 	exporter, err := otlpmetricgrpc.New(
 		ctx,

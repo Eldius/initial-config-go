@@ -48,6 +48,10 @@ func setupLogs(ctx context.Context, appName, format, level, logOutputFile string
 		cfg.Endpoints.Traces = configs.GetTraceBackendEndpoint()
 	}
 
+	if len(cfg.Headers) == 0 {
+		cfg.Headers = configs.GetTelemetryHeaders()
+	}
+
 	if !stdout && logOutputFile == "" {
 		return fmt.Errorf("%w: logOutputFile: %s / stdout: %v", ErrInvalidLogOutputConfig, logOutputFile, stdout)
 	}
@@ -57,7 +61,7 @@ func setupLogs(ctx context.Context, appName, format, level, logOutputFile string
 	}
 
 	if cfg.Enabled && cfg.Endpoints.Logs != "" {
-		exporter, err := logShipper(ctx, cfg.Endpoints.Logs)
+		exporter, err := logShipper(ctx, cfg.Endpoints.Logs, cfg.Headers)
 		if err != nil {
 			return fmt.Errorf("creating log exporter: %w", err)
 		}
@@ -117,11 +121,18 @@ func setupLogs(ctx context.Context, appName, format, level, logOutputFile string
 	return nil
 }
 
-func logShipper(ctx context.Context, logsEndpoint string) (*otlploggrpc.Exporter, error) {
-	exporter, err := otlploggrpc.New(
-		ctx,
+func logShipper(ctx context.Context, logsEndpoint string, headers map[string]string) (*otlploggrpc.Exporter, error) {
+	opts := []otlploggrpc.Option{
 		otlploggrpc.WithInsecure(),
 		otlploggrpc.WithEndpoint(logsEndpoint),
+	}
+	if len(headers) > 0 {
+		opts = append(opts, otlploggrpc.WithHeaders(headers))
+	}
+
+	exporter, err := otlploggrpc.New(
+		ctx,
+		opts...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("creating otlp log exporter: %w", err)

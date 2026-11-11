@@ -78,6 +78,16 @@ func TestOptions(t *testing.T) {
 		assert.Equal(t, "my-logs:4317", cfg.Endpoints.Logs)
 	})
 
+	t.Run("WithHeaders sets the OTLP headers", func(t *testing.T) {
+		cfg := NewDefaultCfg()
+		headers := map[string]string{
+			"Authorization": "Bearer my-token",
+			"X-Api-Key":     "my-api-key",
+		}
+		WithHeaders(headers)(cfg)
+		assert.Equal(t, headers, cfg.Headers)
+	})
+
 	t.Run("WithOtelEnabled enables telemetry", func(t *testing.T) {
 		cfg := NewDefaultCfg()
 		WithOtelEnabled(true)(cfg)

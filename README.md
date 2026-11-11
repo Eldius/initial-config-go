@@ -99,6 +99,7 @@ When using `InitSetup` the effective defaults are:
 | `telemetry.metrics.endpoint` | string | `""` | OTLP Metrics gRPC endpoint |
 | `telemetry.logs.endpoint` | string | `""` | OTLP Logs gRPC endpoint |
 | `telemetry.debug` | bool | `false` | Write OTel SDK debug logs to `otel.log` |
+| `telemetry.headers` | map[string]string | `{}` | Headers sent with each OTLP request (e.g. auth) |
 
 Endpoints are `host:port` (e.g. `localhost:4317`) — all OTLP exporters use insecure gRPC, so no scheme or TLS. Telemetry only activates when `telemetry.enabled` is `true` **and** at least one endpoint is set.
 
@@ -113,7 +114,11 @@ telemetry:
   enabled: true
   traces:
     endpoint: "localhost:4317"
+  headers:
+    x-api-key: "secret"
 ```
+
+> As an environment variable, `telemetry.headers` is a comma-separated list of `key=value` pairs: `APP_TELEMETRY_HEADERS="Authorization=Bearer token,X-Api-Key=secret"`.
 
 ## Logging
 
@@ -230,6 +235,19 @@ telemetry.InitTelemetry(ctx,
 )
 defer telemetry.TelemetryShutdown(ctx)
 ```
+
+### OTLP authentication headers
+
+If your collector requires authentication (e.g. an API key or bearer token), pass a headers map with `WithHeaders` — the headers are sent with each OTLP gRPC request by the traces, metrics and logs exporters:
+
+```go
+telemetry.WithHeaders(map[string]string{
+    "Authorization": "Bearer " + token,
+    "X-Api-Key":     apiKey,
+})
+```
+
+Headers can also be set in the config file via the `telemetry.headers` key (see [Configuration Keys](#configuration-keys)); `WithHeaders` takes precedence when both are set.
 
 > **Note:** The `http.DefaultClient` is NOT automatically instrumented. See [HTTP Client Helper](#http-client-helper) for options.
 

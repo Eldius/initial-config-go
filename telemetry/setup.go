@@ -11,6 +11,9 @@ type OTELConfigs struct {
 		Metrics string
 		Logs    string
 	}
+	// Headers are sent with each OTLP gRPC request, useful for
+	// authentication with the collector (e.g. API keys, bearer tokens).
+	Headers map[string]string
 	Enabled bool
 	Debug   bool
 }
@@ -44,6 +47,15 @@ func WithMetricEndpoint(endpoint string) Option {
 func WithLogsEndpoint(endpoint string) Option {
 	return func(cfg *OTELConfigs) {
 		cfg.Endpoints.Logs = endpoint
+	}
+}
+
+// WithHeaders sets headers sent with each OTLP gRPC request to the
+// traces, metrics and logs exporters, typically used for authentication
+// with the collector (e.g. "Authorization": "Bearer <token>").
+func WithHeaders(headers map[string]string) Option {
+	return func(cfg *OTELConfigs) {
+		cfg.Headers = headers
 	}
 }
 

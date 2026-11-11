@@ -24,6 +24,7 @@ const (
 	TelemetryMetricsBackendEndpointKey = "telemetry.metrics.endpoint"
 	TelemetryLogsBackendEndpointKey    = "telemetry.logs.endpoint"
 	TelemetryDebugKey                  = "telemetry.debug"
+	TelemetryHeadersKey                = "telemetry.headers"
 )
 
 var (
@@ -38,6 +39,7 @@ var (
 		TelemetryTracesBackendEndpointKey:  "",
 		TelemetryMetricsBackendEndpointKey: "",
 		TelemetryLogsBackendEndpointKey:    "",
+		TelemetryHeadersKey:                map[string]string{},
 	}
 
 	// DefaultConfigValuesLogFileMap provides defaults with file logging enabled.
