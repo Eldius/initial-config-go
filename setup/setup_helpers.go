@@ -77,8 +77,12 @@ func PersistentPostRunE(waitTime time.Duration) func(cmd *cobra.Command, args []
 					attribute.Int("process.exit.code", 0),
 				)
 			}
+			defer func() {
+				if data.span != nil {
+					data.span.End()
+				}
+			}()
 			runningTime = time.Since(data.start)
-			defer data.span.End()
 			logs.NewLogger(cmd.Context(), logs.KeyValueData{
 				"cmd": map[string]any{
 					"cmd_name":     cmd.Name(),
