@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.opentelemetry.io/otel/attribute"
 	"log/slog"
 	"os"
 	"time"
+
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/eldius/initial-config-go/configs"
 	"github.com/eldius/initial-config-go/logs"
@@ -161,6 +162,7 @@ func tracerProvider(ctx context.Context, cfg OTELConfigs) error {
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithResource(defaultResources(cfg)),
 		sdktrace.WithSpanProcessor(bsp),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 	)
 
 	SetTracerProvider(provider)
