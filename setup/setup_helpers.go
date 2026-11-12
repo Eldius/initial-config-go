@@ -78,16 +78,16 @@ func PersistentPostRunE(waitTime time.Duration) func(cmd *cobra.Command, args []
 				)
 			}
 			runningTime = time.Since(data.start)
+			defer data.span.End()
+			logs.NewLogger(cmd.Context(), logs.KeyValueData{
+				"cmd": map[string]any{
+					"cmd_name":     cmd.Name(),
+					"cmd_args":     args,
+					"is_recording": isTracing,
+					"running_time": runningTime.String(),
+				},
+			}).Debug("stopping trace")
 		}
-
-		logs.NewLogger(cmd.Context(), logs.KeyValueData{
-			"cmd": map[string]any{
-				"cmd_name":     cmd.Name(),
-				"cmd_args":     args,
-				"is_recording": isTracing,
-				"running_time": runningTime.String(),
-			},
-		}).Debug("stopping trace")
 
 		if err := telemetry.TelemetryForceFlush(cmd.Context()); err != nil {
 			logs.NewLogger(cmd.Context()).WithError(err).Error("failed to force flush telemetry data")
